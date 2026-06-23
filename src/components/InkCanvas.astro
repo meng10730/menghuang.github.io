@@ -1,0 +1,272 @@
+---
+// InkCanvas.astro - 寫意水墨與青綠漸變背景 Canvas 特效
+---
+
+<div class="ink-background-container">
+  <canvas id="ink-canvas"></canvas>
+  <div class="paper-overlay"></div>
+</div>
+
+<style>
+  .ink-background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    /* 青綠山水意境漸變底色 */
+    background: linear-gradient(
+      135deg,
+      #faf7ee 0%,      /* 宣紙米黃 */
+      #edf3ee 40%,     /* 石綠微光 */
+      #e8edf0 80%,     /* 石青微光 */
+      #faf7ee 100%
+    );
+  }
+
+  #ink-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* 宣紙紋理覆蓋層，讓水墨 Canvas 感覺被包在宣紙內部 */
+  .paper-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.15;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, rgba(0, 0, 0, 0) 100%),
+      linear-gradient(rgba(28, 28, 28, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(28, 28, 28, 0.05) 1px, transparent 1px);
+    background-size: 100% 100%, 30px 30px, 30px 30px;
+  }
+</style>
+
+<script>
+  // 寫意水墨粒子系統
+  class InkParticle {
+    x: number;
+    y: number;
+    baseRadius: number;
+    radius: number;
+    alpha: number;
+    maxLife: number;
+    life: number;
+    vx: number;
+    vy: number;
+    color: string;
+    blur: number;
+
+    constructor(x: number, y: number, isMobile: boolean) {
+      this.x = x;
+      this.y = y;
+      // 隨機初始半徑與擴散範圍
+      this.baseRadius = Math.random() * 8 + (isMobile ? 3 : 5);
+      this.radius = this.baseRadius;
+      this.alpha = Math.random() * 0.25 + 0.15; // 保持淡雅，不顯髒
+      this.maxLife = Math.random() * 60 + 50; // 生命週期
+      this.life = this.maxLife;
+      // 微弱的墨跡重力與隨機擴散速度
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = Math.random() * 0.3 + 0.1; // 墨向下滴流的感覺
+      
+      // 水墨黑，帶有一點點青綠的冷色調，使畫面不單調
+      const shade = Math.floor(Math.random() * 20) + 15;
+      const r = shade;
+      const g = shade + 4; // 微偏綠
+      const b = shade + 2; // 微偏青
+      this.color = `${r}, ${g}, ${b}`;
+      this.blur = Math.random() * 15 + 10; // 模糊值，模擬渲染
+    }
+
+    update(isMobile: boolean) {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life--;
+      
+      // 隨著時間生命遞減，半徑慢慢擴散，不透明度慢慢降低
+      const lifeRatio = this.life / this.maxLife;
+      this.radius = this.baseRadius + (1 - lifeRatio) * (isMobile ? 25 : 45);
+      this.alpha = (lifeRatio) * 0.25;
+      this.blur = (1 - lifeRatio) * (isMobile ? 20 : 35) + 5;
+    }
+
+    draw(ctx: CanvasRenderingContext2D, hasFilter: boolean) {
+      ctx.save();
+      
+      if (hasFilter) {
+        // 使用現代瀏覽器的 Canvas filter 實現極美的水墨渲染
+        ctx.filter = `blur(${this.blur}px)`;
+        ctx.fillStyle = `rgba(${this.color}, ${this.alpha})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // 降級方案：使用徑向漸變模擬擴散邊緣
+        const grad = ctx.createRadialGradient(
+          this.x, this.y, this.radius * 0.1, 
+          this.x, this.y, this.radius
+        );
+        grad.addColorStop(0, `rgba(${this.color}, ${this.alpha})`);
+        grad.addColorStop(0.5, `rgba(${this.color}, ${this.alpha * 0.4})`);
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
+  }
+
+  function initInkBackground() {
+    const canvas = document.getElementById('ink-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    let particles: InkParticle[] = [];
+    let isMobile = false;
+    let lastX = 0;
+    let lastY = 0;
+    let active = true;
+
+    // 檢查是否為行動端
+    const checkMobile = () => {
+      isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    };
+    checkMobile();
+
+    // 偵測瀏覽器是否支援 canvas filter (iOS/Safari 早期或其他環境的降級檢測)
+    const hasFilter = typeof ctx.filter !== 'undefined';
+
+    // 重設大小
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      checkMobile();
+    };
+    window.addEventListener('resize', handleResize);
+
+    // 生成墨粒子
+    const createInk = (x: number, y: number) => {
+      if (!active) return;
+      // 限制生成率，移動一定距離才生成新粒子，避免粒子過多造成卡頓
+      const dist = Math.hypot(x - lastX, y - lastY);
+      const limit = isMobile ? 12 : 6;
+      
+      if (dist > limit || Math.random() < 0.1) {
+        const count = isMobile ? 1 : Math.floor(Math.random() * 2) + 1;
+        for (let i = 0; i < count; i++) {
+          // 加入些許隨機偏移，使軌跡更自然，像毛筆點墨
+          const offsetX = (Math.random() - 0.5) * 8;
+          const offsetY = (Math.random() - 0.5) * 8;
+          particles.push(new InkParticle(x + offsetX, y + offsetY, isMobile));
+        }
+        lastX = x;
+        lastY = y;
+      }
+    };
+
+    // 滑鼠與觸控事件監聽
+    const handleMouseMove = (e: MouseEvent) => {
+      createInk(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        createInk(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+    // 自動微風水墨（偶爾隨機在畫面各處產生輕微的滴墨效果，增加動態生機）
+    let autoTimer = 0;
+    const autoDrip = () => {
+      if (!active) return;
+      if (Math.random() < (isMobile ? 0.02 : 0.05)) {
+        const rx = Math.random() * width;
+        const ry = Math.random() * height * 0.4; // 偏向上半部滴落
+        const count = Math.floor(Math.random() * 2) + 1;
+        for (let i = 0; i < count; i++) {
+          particles.push(new InkParticle(rx, ry, isMobile));
+        }
+      }
+    };
+
+    // 動態迴圈
+    const animate = () => {
+      if (!active) return;
+      
+      // 水墨需要有一點殘影感，但又不能留底。
+      // 我們在每影格畫一個極淡的漸變底色，或是直接 clearRect。
+      // 因為背景是有漸變的 CSS 容器，直接 clearRect，然後繪製半透明粒子是效能最好的。
+      ctx.clearRect(0, 0, width, height);
+
+      autoDrip();
+
+      // 更新與繪製粒子
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update(isMobile);
+        p.draw(ctx, hasFilter);
+
+        // 清除生命結束的粒子
+        if (p.life <= 0 || p.alpha <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // 控制最大粒子數量上限，防止極端情況 CPU 爆炸
+      const maxCount = isMobile ? 35 : 100;
+      if (particles.length > maxCount) {
+        particles.splice(0, particles.length - maxCount);
+      }
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    // 回傳清理函數，用於 ViewTransitions 跳轉時避免記憶體洩漏
+    return () => {
+      active = false;
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
+  }
+
+  // 配合 Astro ViewTransitions 生命週期事件
+  let cleanup: (() => void) | null = null;
+  
+  document.addEventListener('astro:page-load', () => {
+    if (cleanup) cleanup();
+    cleanup = initInkBackground();
+  });
+
+  document.addEventListener('astro:before-preparation', () => {
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+  });
+</script>

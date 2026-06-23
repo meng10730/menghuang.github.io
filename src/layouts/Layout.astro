@@ -1,0 +1,160 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import InkCanvas from '../components/InkCanvas.astro';
+import AudioPlayer from '../components/AudioPlayer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { 
+  title = "半盞清茶，寫意水墨 | 個人網站", 
+  description = "基於 Astro 構建的寫意水墨風格個人網站與部落格" 
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- SEO 優化 -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    
+    <!-- 啟用 Astro 的客戶端路由（前身為 ViewTransitions）以達成無縫音樂與動畫 -->
+    <ClientRouter />
+  </head>
+  <body>
+    <!-- 寫意水墨 Canvas 背景 -->
+    <InkCanvas />
+
+    <!-- 全站主排版 -->
+    <div class="site-wrapper">
+      <!-- 新中式導航列 -->
+      <header class="site-header ink-fade-in">
+        <nav class="nav-container">
+          <div class="nav-logo">
+            <a href="/" class="cursive-title ink-logo">唐門</a>
+          </div>
+          <ul class="nav-links">
+            <li>
+              <a href="/" class="ink-link nav-item">首頁</a>
+            </li>
+            <li>
+              <a href="/blog" class="ink-link nav-item">部落格</a>
+            </li>
+          </ul>
+        </nav>
+      </header>
+
+      <!-- 主要內容區域 -->
+      <main class="site-main">
+        <slot />
+      </main>
+
+      <!-- 頁尾 -->
+      <footer class="site-footer">
+        <div class="footer-content">
+          <p>© {new Date().getFullYear()} 唐門弟子. 琴音繚繞，水墨乾坤.</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- 古風背景音樂播放器 -->
+    <AudioPlayer />
+  </body>
+</html>
+
+<style>
+  .site-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10; /* 保證在 Canvas 之上 */
+  }
+
+  .site-header {
+    border-bottom: 1px solid rgba(230, 223, 204, 0.5);
+    background: rgba(253, 252, 247, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-logo .ink-logo {
+    font-size: 1.8rem;
+    color: var(--color-ink-black);
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .nav-links {
+    display: flex;
+    list-style: none;
+    gap: 2.5rem;
+  }
+
+  .nav-item {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--color-ink-text);
+    padding: 0.3rem 0;
+  }
+
+  .nav-item:hover {
+    color: var(--color-mountain-cyan);
+  }
+
+  .site-main {
+    flex: 1;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  .site-footer {
+    border-top: 1px solid rgba(230, 223, 204, 0.4);
+    padding: 2rem;
+    text-align: center;
+    background: rgba(253, 252, 247, 0.3);
+  }
+
+  .footer-content p {
+    font-family: var(--font-serif);
+    font-size: 0.85rem;
+    color: var(--color-ink-grey);
+    letter-spacing: 0.05em;
+  }
+
+  /* 行動端導航優化 */
+  @media (max-width: 768px) {
+    .nav-container {
+      padding: 1rem 1.5rem;
+    }
+    .site-main {
+      padding: 2rem 1.5rem;
+    }
+  }
+</style>

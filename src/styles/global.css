@@ -1,0 +1,163 @@
+/* 引入 Google Fonts 的中文書法與古風字型（僅用於標題與重要選單） */
+@import url('https://fonts.googleapis.com/css2?family=Long+Cang&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+TC:wght@400;600;900&display=swap');
+
+:root {
+  /* 宣紙與水墨色彩系統 */
+  --color-paper-light: #fdfcf7; /* 宣紙亮色 */
+  --color-paper-bg: #faf7ee;    /* 宣紙溫米黃 */
+  --color-paper-dark: #f3edd8;  /* 舊宣紙黃 */
+  --color-ink-black: #1a1a1a;   /* 漆黑/主標題 */
+  --color-ink-text: #2c2c2c;    /* 水墨深灰/正文 */
+  --color-ink-grey: #5c5c5c;    /* 淡墨/輔助字 */
+  --color-ink-light: #8c8c8c;   /* 焦墨/微灰 */
+  --color-border: #e6dfcc;      /* 宣紙接縫線 */
+  
+  /* 青綠山水礦物色 */
+  --color-mountain-cyan: #2d5f5a; /* 石青 (礦物青) */
+  --color-mountain-green: #3d7e5a; /* 石綠 (礦物綠) */
+  --color-mountain-accent: #c48c3b; /* 赭石 (礦物黃/點綴) */
+  
+  /* 字體系統 */
+  --font-cursive: 'Ma Shan Zheng', 'Long Cang', 'Songti TC', 'PMingLiU', serif; /* 書法字 */
+  --font-serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Georgia', serif;      /* 正文宋體 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
+  /* 轉折動畫 */
+  --transition-smooth: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-fast: all 0.25s ease;
+}
+
+/* 全局重置與宣紙質感底色 */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+  font-family: var(--font-serif);
+  color: var(--color-ink-text);
+  background-color: var(--color-paper-bg);
+  /* 宣紙微噪點與纖維感疊加 */
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, rgba(0, 0, 0, 0) 100%),
+    linear-gradient(rgba(28, 28, 28, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 28, 28, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+  line-height: 1.8;
+  overflow-x: hidden;
+  font-size: 16px;
+}
+
+/* 捲軸美化 (水墨風) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-paper-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-light);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-grey);
+}
+
+/* 書法標題樣式 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  color: var(--color-ink-black);
+  letter-spacing: 0.05em;
+}
+
+.cursive-title {
+  font-family: var(--font-cursive);
+  font-weight: normal;
+  letter-spacing: 0.1em;
+}
+
+a {
+  color: var(--color-mountain-cyan);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-mountain-green);
+}
+
+/* 水墨書寫下底線動畫效果 */
+.ink-link {
+  position: relative;
+  display: inline-block;
+}
+
+.ink-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, transparent, var(--color-ink-black) 50%, transparent);
+  transform-origin: bottom center;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.ink-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* 宣紙半透明卡片容器 */
+.paper-card {
+  background: rgba(253, 252, 247, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  padding: 2rem;
+  transition: var(--transition-smooth);
+}
+
+.paper-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px rgba(45, 95, 90, 0.05); /* 帶有青綠山水微光的陰影 */
+  border-color: rgba(61, 126, 90, 0.3);
+}
+
+/* 寫意漸顯動畫 */
+@keyframes inkFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.ink-fade-in {
+  animation: inkFadeIn 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+/* 寫意山水線條裝飾 */
+.mountain-line {
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    var(--color-mountain-cyan) 30%, 
+    var(--color-mountain-green) 70%, 
+    transparent
+  );
+  opacity: 0.4;
+  margin: 1.5rem 0;
+}

@@ -1,0 +1,289 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+// 獲取所有部落格文章並按發布日期排序 (降序)
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+// 格式化日期為中文古典格式或乾淨的年月日
+const formatDate = (date: Date) => {
+  return date.toLocaleDateString('zh-Hant', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+---
+
+<Layout title="觀其文 | 賽博山莊部落格" description="探尋代碼乾坤與武俠人生的筆記，記錄唐門子弟的修行感悟。">
+  <div class="blog-container">
+    
+    <!-- 頁面書法標題 -->
+    <header class="blog-header ink-fade-in">
+      <h1 class="cursive-title page-title">觀其文</h1>
+      <p class="blog-desc">靜水流深，墨跡書心。此處記錄江湖見聞與修行心得。</p>
+      <div class="mountain-line"></div>
+    </header>
+
+    <!-- 時間軸文章列表 -->
+    <div class="posts-timeline ink-fade-in" style="animation-delay: 0.2s;">
+      {posts.length === 0 ? (
+        <div class="paper-card no-posts">
+          <p>山莊尚無書信墨跡，容日後添置。</p>
+        </div>
+      ) : (
+        <div class="timeline-wrapper">
+          <!-- 時間軸的垂直貫穿水墨線 -->
+          <div class="timeline-line"></div>
+          
+          {posts.map((post, index) => (
+            <article class="timeline-item" style={`animation-delay: ${0.1 * index}s;`}>
+              <!-- 時間軸的小墨點錨點 -->
+              <div class="timeline-dot"></div>
+              
+              <!-- 文章發布時間 -->
+              <div class="post-date">
+                <time datetime={post.data.pubDate.toISOString()}>
+                  {formatDate(post.data.pubDate)}
+                </time>
+              </div>
+
+              <!-- 文章卡片內容 -->
+              <div class="post-card-wrapper">
+                <a href={`/blog/${post.id}`} class="post-link-card">
+                  <div class="paper-card post-card">
+                    <h2 class="post-title">{post.data.title}</h2>
+                    <p class="post-description">{post.data.description}</p>
+                    
+                    <div class="post-meta">
+                      <!-- 標籤 -->
+                      {post.data.tags && post.data.tags.length > 0 && (
+                        <div class="post-tags">
+                          {post.data.tags.map((tag) => (
+                            <span class="post-tag"># {tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <!-- 閱讀更多 -->
+                      <span class="read-more-link ink-link">閱全文 →</span>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+
+  </div>
+</Layout>
+
+<style>
+  .blog-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .blog-header {
+    text-align: center;
+  }
+
+  .page-title {
+    font-size: 3.8rem;
+    color: var(--color-ink-black);
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-desc {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    color: var(--color-ink-grey);
+    letter-spacing: 0.1em;
+  }
+
+  /* 時間軸架構 */
+  .posts-timeline {
+    position: relative;
+    padding: 1rem 0;
+  }
+
+  .timeline-wrapper {
+    position: relative;
+  }
+
+  /* 時間軸中心垂直線 */
+  .timeline-line {
+    position: absolute;
+    left: 200px; /* 電腦端對齊日期與卡片中間 */
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--color-ink-light) 0%,
+      var(--color-border) 50%,
+      transparent 100%
+    );
+    opacity: 0.5;
+  }
+
+  .timeline-item {
+    position: relative;
+    display: flex;
+    margin-bottom: 3.5rem;
+    align-items: flex-start;
+  }
+
+  /* 時間軸墨滴點 */
+  .timeline-dot {
+    position: absolute;
+    left: 197px; /* 居中對齊垂直線 */
+    top: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-ink-black);
+    border: 2px solid var(--color-paper-bg);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+    z-index: 5;
+    transition: var(--transition-fast);
+  }
+
+  .timeline-item:hover .timeline-dot {
+    background: var(--color-mountain-cyan);
+    transform: scale(1.3);
+    box-shadow: 0 0 12px rgba(45, 95, 90, 0.4);
+  }
+
+  /* 左側日期區 */
+  .post-date {
+    width: 170px;
+    text-align: right;
+    padding-top: 5px;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: var(--color-ink-grey);
+    letter-spacing: 0.05em;
+  }
+
+  /* 右側卡片區 */
+  .post-card-wrapper {
+    flex: 1;
+    margin-left: 55px; /* 與日期、線隔開 */
+  }
+
+  .post-link-card {
+    display: block;
+  }
+
+  .post-card {
+    padding: 1.8rem 2rem;
+    border-left: 2.5px solid var(--color-border);
+  }
+
+  .post-card:hover {
+    border-left-color: var(--color-mountain-cyan);
+  }
+
+  .post-title {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-ink-black);
+    margin-bottom: 0.8rem;
+    transition: var(--transition-fast);
+  }
+
+  .post-link-card:hover .post-title {
+    color: var(--color-mountain-cyan);
+  }
+
+  .post-description {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-ink-text);
+    margin-bottom: 1.5rem;
+    text-align: justify;
+  }
+
+  .post-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-top: 1px dashed rgba(230, 223, 204, 0.6);
+    padding-top: 1rem;
+  }
+
+  .post-tags {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .post-tag {
+    font-size: 0.85rem;
+    color: var(--color-ink-grey);
+  }
+
+  .read-more-link {
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-ink-black);
+  }
+
+  .post-link-card:hover .read-more-link {
+    color: var(--color-mountain-cyan);
+  }
+
+  .no-posts {
+    text-align: center;
+    padding: 3rem;
+    font-family: var(--font-serif);
+    color: var(--color-ink-grey);
+  }
+
+  /* 行動端時間軸自適應優化 */
+  @media (max-width: 768px) {
+    .timeline-line {
+      left: 15px; /* 時間軸靠左 */
+    }
+
+    .timeline-dot {
+      left: 12px;
+      top: 8px;
+    }
+
+    .timeline-item {
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-left: 35px;
+    }
+
+    .post-date {
+      width: 100%;
+      text-align: left;
+      font-size: 0.85rem;
+      padding-bottom: 0.2rem;
+    }
+
+    .post-card-wrapper {
+      width: 100%;
+      margin-left: 0;
+    }
+    
+    .post-card {
+      padding: 1.2rem 1.5rem;
+    }
+
+    .page-title {
+      font-size: 2.8rem;
+    }
+  }
+</style>
