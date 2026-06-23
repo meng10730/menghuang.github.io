@@ -43,14 +43,23 @@ const {
       <header class="site-header ink-fade-in">
         <nav class="nav-container">
           <div class="nav-logo">
-            <a href="/" class="cursive-title ink-logo">唐門</a>
+            <a href={import.meta.env.BASE_URL} class="cursive-title ink-logo">唐門</a>
           </div>
           <ul class="nav-links">
             <li>
-              <a href="/" class="ink-link nav-item">首頁</a>
+              <a href={import.meta.env.BASE_URL} class="ink-link nav-item">首頁</a>
             </li>
             <li>
-              <a href="/blog" class="ink-link nav-item">部落格</a>
+              <a href={`${import.meta.env.BASE_URL}about`} class="ink-link nav-item">關於</a>
+            </li>
+            <li>
+              <a href={`${import.meta.env.BASE_URL}works`} class="ink-link nav-item">作品</a>
+            </li>
+            <li>
+              <a href={`${import.meta.env.BASE_URL}shanzhuang`} class="ink-link nav-item">山莊</a>
+            </li>
+            <li>
+              <a href={`${import.meta.env.BASE_URL}blog`} class="ink-link nav-item">部落格</a>
             </li>
           </ul>
         </nav>

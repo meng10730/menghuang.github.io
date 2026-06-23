@@ -1,0 +1,315 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+const novels = await getCollection('novels', entry => !entry.id.startsWith('_'));
+const characters = await getCollection('characters', entry => !entry.id.startsWith('_'));
+const guoxue = await getCollection('guoxue', entry => !entry.id.startsWith('_'));
+
+const novelStatusMap = {
+  ongoing: '連載中',
+  completed: '已完結',
+  hiatus: '暫停中'
+};
+
+const guoxueCatMap = {
+  confucianism: '儒家',
+  taoism: '道家',
+  buddhism: '佛家',
+  history: '史籍',
+  poetry: '詩詞',
+  other: '其他'
+};
+---
+
+<Layout title="唐門山莊 | 創作與筆記" description="山莊藏書閣，包含小說連載、人物設定與國學讀書筆記">
+  <div class="shanzhuang-container ink-fade-in">
+    <h1 class="page-title">唐門山莊</h1>
+    <p class="page-subtitle cursive-title">「一盞清茶論江湖，半壁江山寫墨意」</p>
+    <div class="mountain-line"></div>
+
+    <!-- 小說發布區塊 -->
+    <section class="villa-section">
+      <h2 class="section-title cursive-title">藏書閣 · 小說發布</h2>
+      {novels.length === 0 ? (
+        <div class="empty-state paper-card">
+          <p>閣中目前尚無小說存卷，待莊主提筆修書...</p>
+        </div>
+      ) : (
+        <div class="villa-grid">
+          {novels.map(novel => (
+            <div class="villa-card paper-card">
+              <div class="card-meta">
+                <span class={`status-badge ${novel.data.status}`}>
+                  {novelStatusMap[novel.data.status] || novel.data.status}
+                </span>
+                {novel.data.genre && (
+                  <span class="genre-tags">
+                    {novel.data.genre.map(g => (
+                      <span class="genre-tag">#{g}</span>
+                    ))}
+                  </span>
+                )}
+              </div>
+              <h3 class="card-title">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/novels/${novel.slug}`}>{novel.data.title}</a>
+              </h3>
+              <p class="card-desc">{novel.data.description}</p>
+              <div class="card-footer">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/novels/${novel.slug}`} class="read-btn">
+                  翻閱小說 →
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
+    <!-- 人物設定區塊 -->
+    <section class="villa-section">
+      <h2 class="section-title cursive-title">俠客譜 · 人物設定</h2>
+      {characters.length === 0 ? (
+        <div class="empty-state paper-card">
+          <p>譜上目前尚無俠士記載，江湖寥落...</p>
+        </div>
+      ) : (
+        <div class="villa-grid">
+          {characters.map(char => (
+            <div class="villa-card paper-card">
+              <div class="card-meta">
+                {char.data.affiliation && <span class="affiliation">{char.data.affiliation}</span>}
+                {char.data.novel && <span class="novel-ref">《{char.data.novel}》</span>}
+              </div>
+              <h3 class="card-title">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/characters/${char.slug}`}>
+                  {char.data.name} 
+                  {char.data.alias && char.data.alias.length > 0 && (
+                    <span class="alias-title">（{char.data.alias.join(' / ')}）</span>
+                  )}
+                </a>
+              </h3>
+              <div class="char-tags">
+                {char.data.tags.map(t => (
+                  <span class="char-tag">{t}</span>
+                ))}
+              </div>
+              <div class="card-footer">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/characters/${char.slug}`} class="read-btn">
+                  人物誌 →
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
+    <!-- 國學筆記區塊 -->
+    <section class="villa-section">
+      <h2 class="section-title cursive-title">研經室 · 國學筆記</h2>
+      {guoxue.length === 0 ? (
+        <div class="empty-state paper-card">
+          <p>幾案前尚無筆記留存，待莊主研墨記錄...</p>
+        </div>
+      ) : (
+        <div class="villa-grid">
+          {guoxue.map(note => (
+            <div class="villa-card paper-card">
+              <div class="card-meta">
+                <span class="category-badge">
+                  {guoxueCatMap[note.data.category] || note.data.category}
+                </span>
+                {note.data.source && <span class="source-ref">{note.data.source}</span>}
+              </div>
+              <h3 class="card-title">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/guoxue/${note.slug}`}>{note.data.title}</a>
+              </h3>
+              <div class="note-tags">
+                {note.data.tags.map(t => (
+                  <span class="note-tag">{t}</span>
+                ))}
+              </div>
+              <div class="card-footer">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/guoxue/${note.slug}`} class="read-btn">
+                  研讀筆記 →
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .shanzhuang-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .page-title {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .page-subtitle {
+    text-align: center;
+    color: var(--color-ink-grey);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .villa-section {
+    margin-top: 3.5rem;
+  }
+  
+  .section-title {
+    font-size: 1.8rem;
+    color: var(--color-mountain-cyan);
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.5rem;
+  }
+  
+  .villa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .villa-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+  
+  .card-meta {
+    font-size: 0.8rem;
+    color: var(--color-ink-grey);
+    margin-bottom: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .status-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.ongoing {
+    background: rgba(196, 140, 59, 0.1);
+    color: var(--color-mountain-accent);
+    border: 1px solid rgba(196, 140, 59, 0.2);
+  }
+  
+  .status-badge.completed {
+    background: rgba(61, 126, 90, 0.1);
+    color: var(--color-mountain-green);
+    border: 1px solid rgba(61, 126, 90, 0.2);
+  }
+  
+  .status-badge.hiatus {
+    background: rgba(92, 92, 92, 0.1);
+    color: var(--color-ink-grey);
+    border: 1px solid rgba(92, 92, 92, 0.2);
+  }
+  
+  .genre-tag {
+    margin-left: 0.3rem;
+    color: var(--color-mountain-cyan);
+  }
+  
+  .card-title {
+    font-size: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .card-title a {
+    color: var(--color-ink-black);
+    transition: var(--transition-fast);
+  }
+  
+  .card-title a:hover {
+    color: var(--color-mountain-cyan);
+  }
+  
+  .alias-title {
+    font-size: 0.9rem;
+    color: var(--color-ink-grey);
+    font-weight: normal;
+  }
+  
+  .card-desc {
+    font-size: 0.95rem;
+    color: var(--color-ink-text);
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+    flex-grow: 1;
+  }
+  
+  .char-tags, .note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .char-tag, .note-tag {
+    font-size: 0.75rem;
+    background: rgba(45, 95, 90, 0.05);
+    color: var(--color-mountain-cyan);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid rgba(45, 95, 90, 0.1);
+  }
+  
+  .affiliation {
+    background: rgba(61, 126, 90, 0.08);
+    color: var(--color-mountain-green);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+  }
+  
+  .category-badge {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--color-ink-black);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  
+  .card-footer {
+    border-top: 1px dashed var(--color-border);
+    padding-top: 0.8rem;
+    margin-top: auto;
+  }
+  
+  .read-btn {
+    font-size: 0.9rem;
+    color: var(--color-mountain-cyan);
+    font-weight: 600;
+    transition: var(--transition-fast);
+    display: inline-block;
+  }
+  
+  .read-btn:hover {
+    color: var(--color-mountain-green);
+    transform: translateX(4px);
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    color: var(--color-ink-grey);
+    font-style: italic;
+  }
+</style>
