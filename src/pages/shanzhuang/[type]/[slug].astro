@@ -3,24 +3,29 @@ import { getCollection } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
 
 export async function getStaticPaths() {
-  const novels = await getCollection('novels', entry => !entry.id.startsWith('_'));
-  const characters = await getCollection('characters', entry => !entry.id.startsWith('_'));
-  const guoxue = await getCollection('guoxue', entry => !entry.id.startsWith('_'));
+  try {
+    const novels = await getCollection('novels', entry => !entry.id.startsWith('_'));
+    const characters = await getCollection('characters', entry => !entry.id.startsWith('_'));
+    const guoxue = await getCollection('guoxue', entry => !entry.id.startsWith('_'));
 
-  return [
-    ...novels.map(entry => ({
-      params: { type: 'novels', slug: entry.slug },
-      props: { entry, type: 'novels' }
-    })),
-    ...characters.map(entry => ({
-      params: { type: 'characters', slug: entry.slug },
-      props: { entry, type: 'characters' }
-    })),
-    ...guoxue.map(entry => ({
-      params: { type: 'guoxue', slug: entry.slug },
-      props: { entry, type: 'guoxue' }
-    }))
-  ];
+    return [
+      ...novels.map(entry => ({
+        params: { type: 'novels', slug: entry.slug },
+        props: { entry, type: 'novels' }
+      })),
+      ...characters.map(entry => ({
+        params: { type: 'characters', slug: entry.slug },
+        props: { entry, type: 'characters' }
+      })),
+      ...guoxue.map(entry => ({
+        params: { type: 'guoxue', slug: entry.slug },
+        props: { entry, type: 'guoxue' }
+      }))
+    ];
+  } catch (error) {
+    console.error("GET STATIC PATHS ERROR:", error);
+    throw error;
+  }
 }
 
 const { entry, type } = Astro.props;
@@ -43,8 +48,8 @@ const guoxueCatMap = {
 ---
 
 <Layout 
-  title={`${entry.data.title || entry.data.name} | 唐門山莊`} 
-  description={entry.data.description || `唐門山莊藏書閣內容`}
+  title={`${(entry.data as any).title || (entry.data as any).name} | 唐門山莊`} 
+  description={(entry.data as any).description || `唐門山莊藏書閣內容`}
 >
   <article class="detail-container ink-fade-in">
     <div class="back-link-wrapper">
@@ -57,33 +62,33 @@ const guoxueCatMap = {
       <header class="detail-header">
         {type === 'novels' && (
           <div class="detail-meta">
-            <span class={`status-badge ${entry.data.status}`}>
-              {novelStatusMap[entry.data.status] || entry.data.status}
+            <span class={`status-badge ${(entry.data as any).status}`}>
+              {(novelStatusMap as any)[(entry.data as any).status] || (entry.data as any).status}
             </span>
-            <span class="meta-label">發布時間：{new Date(entry.data.pubDate).toLocaleDateString('zh-TW')}</span>
+            <span class="meta-label">發布時間：{new Date((entry.data as any).pubDate).toLocaleDateString('zh-TW')}</span>
           </div>
         )}
         
         {type === 'characters' && (
           <div class="detail-meta">
-            {entry.data.affiliation && <span class="affiliation-badge">{entry.data.affiliation}</span>}
-            {entry.data.novel && <span class="novel-badge">出處：《{entry.data.novel}》</span>}
+            {(entry.data as any).affiliation && <span class="affiliation-badge">{(entry.data as any).affiliation}</span>}
+            {(entry.data as any).novel && <span class="novel-badge">出處：《{(entry.data as any).novel}》</span>}
           </div>
         )}
 
         {type === 'guoxue' && (
           <div class="detail-meta">
             <span class="category-badge">
-              {guoxueCatMap[entry.data.category] || entry.data.category}
+              {(guoxueCatMap as any)[(entry.data as any).category] || (entry.data as any).category}
             </span>
-            {entry.data.source && <span class="source-badge">典籍：{entry.data.source}</span>}
+            {(entry.data as any).source && <span class="source-badge">典籍：{(entry.data as any).source}</span>}
           </div>
         )}
 
-        <h1 class="detail-title cursive-title">{entry.data.title || entry.data.name}</h1>
+        <h1 class="detail-title cursive-title">{(entry.data as any).title || (entry.data as any).name}</h1>
         
-        {type === 'characters' && entry.data.alias && entry.data.alias.length > 0 && (
-          <p class="detail-subtitle">別名 / 江湖稱號：{entry.data.alias.join('、')}</p>
+        {type === 'characters' && (entry.data as any).alias && (entry.data as any).alias.length > 0 && (
+          <p class="detail-subtitle">別名 / 江湖稱號：{(entry.data as any).alias.join('、')}</p>
         )}
       </header>
 
