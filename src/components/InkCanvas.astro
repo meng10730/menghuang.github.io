@@ -133,10 +133,10 @@
 
   function initInkBackground() {
     const canvas = document.getElementById('ink-canvas') as HTMLCanvasElement;
-    if (!canvas) return;
+    if (!canvas) return () => {};
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) return () => {};
 
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);

@@ -1,0 +1,330 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  return [
+    { params: { type: 'novels' }, props: { title: '藏書閣 · 小說列表', subtitle: '閣中存卷，江湖故事，躍然紙上。' } },
+    { params: { type: 'characters' }, props: { title: '俠客譜 · 人物列表', subtitle: '江湖豪傑，正邪門派，群俠列傳。' } },
+    { params: { type: 'guoxue' }, props: { title: '研經室 · 國學筆記', subtitle: '幾案研經，讀書札記，修身齊家。' } },
+    { params: { type: 'worldview' }, props: { title: '風物誌 · 世界觀設定', subtitle: '玄理風物，天地運行，設定奧秘。' } },
+    { params: { type: 'factions' }, props: { title: '群雄會 · 勢力組織', subtitle: '江湖割據，名門暗潮，群雄並起。' } }
+  ];
+}
+
+const { type } = Astro.params;
+const { title, subtitle } = Astro.props;
+
+const items = await getCollection(type as any, entry => !entry.id.startsWith('_'));
+
+// 排序：預設按發布日期排序（如果有）
+items.sort((a, b) => {
+  const dateA = new Date((a.data as any).pubDate || 0).getTime();
+  const dateB = new Date((b.data as any).pubDate || 0).getTime();
+  return dateB - dateA;
+});
+
+const novelStatusMap = {
+  ongoing: '連載中',
+  completed: '已完結',
+  hiatus: '暫停中'
+};
+
+const guoxueCatMap = {
+  confucianism: '儒家',
+  taoism: '道家',
+  buddhism: '佛家',
+  history: '史籍',
+  poetry: '詩詞',
+  other: '其他'
+};
+---
+
+<Layout title={`${title} | 唐門山莊`} description={subtitle}>
+  <div class="shanzhuang-container ink-fade-in">
+    <div class="back-link-wrapper">
+      <a href={`${import.meta.env.BASE_URL}shanzhuang`} class="back-link">
+        ← 返回山莊主頁
+      </a>
+    </div>
+
+    <h1 class="page-title cursive-title">{title}</h1>
+    <p class="page-subtitle cursive-title">「{subtitle}」</p>
+    <div class="mountain-line"></div>
+
+    {items.length === 0 ? (
+      <div class="empty-state paper-card">
+        <p>此閣目前尚無卷軸記載，待莊主提筆修書...</p>
+      </div>
+    ) : (
+      <div class="villa-grid">
+        {items.map(item => {
+          const slug = item.slug;
+          const data = item.data as any;
+          return (
+            <div class="villa-card paper-card">
+              <div class="card-meta">
+                {type === 'novels' && (
+                  <>
+                    <span class={`status-badge ${data.status}`}>
+                      {novelStatusMap[data.status] || data.status}
+                    </span>
+                    {data.genre && (
+                      <span class="genre-tags">
+                        {data.genre.map(g => (
+                          <span class="genre-tag">#{g}</span>
+                        ))}
+                      </span>
+                    )}
+                  </>
+                )}
+                {type === 'characters' && (
+                  <>
+                    {data.affiliation && <span class="affiliation">{data.affiliation}</span>}
+                    {data.novel && <span class="novel-ref">《{data.novel}》</span>}
+                  </>
+                )}
+                {type === 'guoxue' && (
+                  <>
+                    <span class="category-badge">
+                      {guoxueCatMap[data.category] || data.category}
+                    </span>
+                    {data.source && <span class="source-ref">{data.source}</span>}
+                  </>
+                )}
+                {type === 'worldview' && (
+                  <>
+                    <span class="category-badge">世界觀</span>
+                    {data.category && <span class="source-ref">{data.category}</span>}
+                  </>
+                )}
+                {type === 'factions' && (
+                  <>
+                    <span class="category-badge">勢力</span>
+                    {data.category && <span class="source-ref">{data.category}</span>}
+                  </>
+                )}
+              </div>
+
+              <h3 class="card-title">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/${type}/${slug}`}>
+                  {data.title || data.name}
+                  {type === 'characters' && data.alias && data.alias.length > 0 && (
+                    <span class="alias-title">（{data.alias.join(' / ')}）</span>
+                  )}
+                </a>
+              </h3>
+
+              {type === 'novels' && <p class="card-desc">{data.description}</p>}
+              {type === 'characters' && data.tags && (
+                <div class="char-tags">
+                  {data.tags.map(t => (
+                    <span class="char-tag">{t}</span>
+                  ))}
+                </div>
+              )}
+              {type === 'guoxue' && data.tags && (
+                <div class="note-tags">
+                  {data.tags.map(t => (
+                    <span class="note-tag">{t}</span>
+                  ))}
+                </div>
+              )}
+              {type === 'worldview' && data.pubDate && (
+                <p class="card-desc text-xs text-ink-grey">發布於 {new Date(data.pubDate).toLocaleDateString('zh-TW')}</p>
+              )}
+              {type === 'factions' && data.pubDate && (
+                <p class="card-desc text-xs text-ink-grey">創建於 {new Date(data.pubDate).toLocaleDateString('zh-TW')}</p>
+              )}
+
+              <div class="card-footer">
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/${type}/${slug}`} class="read-btn">
+                  {type === 'novels' && '翻閱小說 →'}
+                  {type === 'characters' && '人物誌 →'}
+                  {type === 'guoxue' && '研讀筆記 →'}
+                  {type === 'worldview' && '研讀設定 →'}
+                  {type === 'factions' && '探尋勢力 →'}
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .shanzhuang-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .back-link-wrapper {
+    margin-bottom: 1.5rem;
+  }
+  
+  .back-link {
+    font-size: 0.95rem;
+    color: var(--color-mountain-cyan);
+    font-weight: 600;
+  }
+  
+  .back-link:hover {
+    color: var(--color-mountain-green);
+  }
+
+  .page-title {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .page-subtitle {
+    text-align: center;
+    color: var(--color-ink-grey);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .villa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .villa-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+  
+  .card-meta {
+    font-size: 0.8rem;
+    color: var(--color-ink-grey);
+    margin-bottom: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .status-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.ongoing {
+    background: rgba(196, 140, 59, 0.1);
+    color: var(--color-mountain-accent);
+    border: 1px solid rgba(196, 140, 59, 0.2);
+  }
+  
+  .status-badge.completed {
+    background: rgba(61, 126, 90, 0.1);
+    color: var(--color-mountain-green);
+    border: 1px solid rgba(61, 126, 90, 0.2);
+  }
+  
+  .status-badge.hiatus {
+    background: rgba(92, 92, 92, 0.1);
+    color: var(--color-ink-grey);
+    border: 1px solid rgba(92, 92, 92, 0.2);
+  }
+  
+  .genre-tag {
+    margin-left: 0.3rem;
+    color: var(--color-mountain-cyan);
+  }
+  
+  .card-title {
+    font-size: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .card-title a {
+    color: var(--color-ink-black);
+    transition: var(--transition-fast);
+  }
+  
+  .card-title a:hover {
+    color: var(--color-mountain-cyan);
+  }
+  
+  .alias-title {
+    font-size: 0.9rem;
+    color: var(--color-ink-grey);
+    font-weight: normal;
+  }
+  
+  .card-desc {
+    font-size: 0.95rem;
+    color: var(--color-ink-text);
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+    flex-grow: 1;
+  }
+  
+  .char-tags, .note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .char-tag, .note-tag {
+    font-size: 0.75rem;
+    background: rgba(45, 95, 90, 0.05);
+    color: var(--color-mountain-cyan);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid rgba(45, 95, 90, 0.1);
+  }
+  
+  .affiliation {
+    background: rgba(61, 126, 90, 0.08);
+    color: var(--color-mountain-green);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+  }
+  
+  .category-badge {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--color-ink-black);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  
+  .card-footer {
+    border-top: 1px dashed var(--color-border);
+    padding-top: 0.8rem;
+    margin-top: auto;
+  }
+  
+  .read-btn {
+    font-size: 0.9rem;
+    color: var(--color-mountain-cyan);
+    font-weight: 600;
+    transition: var(--transition-fast);
+    display: inline-block;
+  }
+  
+  .read-btn:hover {
+    color: var(--color-mountain-green);
+    transform: translateX(4px);
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    color: var(--color-ink-grey);
+    font-style: italic;
+  }
+</style>

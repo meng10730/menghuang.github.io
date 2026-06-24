@@ -2,20 +2,20 @@ import { execSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
 
-const filePage = path.resolve('src/pages/keystatic/[...params].astro');
-const filePageDisabled = filePage + '.disabled';
-const fileApi = path.resolve('src/pages/api/keystatic/[...params].ts');
-const fileApiDisabled = fileApi + '.disabled';
+const pathPage = path.resolve('src/pages/keystatic');
+const pathPageTemp = path.resolve('temp-keystatic-page');
+const pathApi = path.resolve('src/pages/api/keystatic');
+const pathApiTemp = path.resolve('temp-keystatic-api');
 
 async function run() {
   console.log('--- Preparing build (disabling dev-only routes) ---');
-  if (await fs.pathExists(filePage)) {
-    await fs.move(filePage, filePageDisabled, { overwrite: true });
-    console.log('Disabled keystatic page');
+  if (await fs.pathExists(pathPage)) {
+    await fs.move(pathPage, pathPageTemp, { overwrite: true });
+    console.log('Disabled keystatic page folder');
   }
-  if (await fs.pathExists(fileApi)) {
-    await fs.move(fileApi, fileApiDisabled, { overwrite: true });
-    console.log('Disabled keystatic API route');
+  if (await fs.pathExists(pathApi)) {
+    await fs.move(pathApi, pathApiTemp, { overwrite: true });
+    console.log('Disabled keystatic API folder');
   }
 
   let buildError = null;
@@ -27,13 +27,13 @@ async function run() {
     buildError = err;
   } finally {
     console.log('--- Cleaning up (restoring dev-only routes) ---');
-    if (await fs.pathExists(filePageDisabled)) {
-      await fs.move(filePageDisabled, filePage, { overwrite: true });
-      console.log('Restored keystatic page');
+    if (await fs.pathExists(pathPageTemp)) {
+      await fs.move(pathPageTemp, pathPage, { overwrite: true });
+      console.log('Restored keystatic page folder');
     }
-    if (await fs.pathExists(fileApiDisabled)) {
-      await fs.move(fileApiDisabled, fileApi, { overwrite: true });
-      console.log('Restored keystatic API route');
+    if (await fs.pathExists(pathApiTemp)) {
+      await fs.move(pathApiTemp, pathApi, { overwrite: true });
+      console.log('Restored keystatic API folder');
     }
   }
 

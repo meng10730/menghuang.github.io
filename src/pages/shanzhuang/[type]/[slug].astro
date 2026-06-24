@@ -7,6 +7,8 @@ export async function getStaticPaths() {
     const novels = await getCollection('novels', entry => !entry.id.startsWith('_'));
     const characters = await getCollection('characters', entry => !entry.id.startsWith('_'));
     const guoxue = await getCollection('guoxue', entry => !entry.id.startsWith('_'));
+    const worldview = await getCollection('worldview', entry => !entry.id.startsWith('_'));
+    const factions = await getCollection('factions', entry => !entry.id.startsWith('_'));
 
     return [
       ...novels.map(entry => ({
@@ -20,6 +22,14 @@ export async function getStaticPaths() {
       ...guoxue.map(entry => ({
         params: { type: 'guoxue', slug: entry.slug },
         props: { entry, type: 'guoxue' }
+      })),
+      ...worldview.map(entry => ({
+        params: { type: 'worldview', slug: entry.slug },
+        props: { entry, type: 'worldview' }
+      })),
+      ...factions.map(entry => ({
+        params: { type: 'factions', slug: entry.slug },
+        props: { entry, type: 'factions' }
       }))
     ];
   } catch (error) {
@@ -30,6 +40,25 @@ export async function getStaticPaths() {
 
 const { entry, type } = Astro.props;
 const { Content } = await entry.render();
+
+const factions = await getCollection('factions', entry => !entry.id.startsWith('_'));
+const characters = await getCollection('characters', entry => !entry.id.startsWith('_'));
+
+let characterFaction = null;
+if (type === 'characters') {
+  const affiliationSlug = (entry.data as any).affiliation;
+  if (affiliationSlug) {
+    characterFaction = factions.find(f => f.slug === affiliationSlug || f.data.title === affiliationSlug);
+  }
+}
+
+let factionMembers = [];
+if (type === 'factions') {
+  factionMembers = characters.filter(char => {
+    const aff = char.data.affiliation;
+    return aff === entry.slug || aff === (entry.data as any).title;
+  });
+}
 
 const novelStatusMap = {
   ongoing: '連載中',
@@ -71,7 +100,15 @@ const guoxueCatMap = {
         
         {type === 'characters' && (
           <div class="detail-meta">
-            {(entry.data as any).affiliation && <span class="affiliation-badge">{(entry.data as any).affiliation}</span>}
+            {(entry.data as any).affiliation && (
+              characterFaction ? (
+                <a href={`${import.meta.env.BASE_URL}shanzhuang/factions/${characterFaction.slug}`} class="affiliation-badge ink-link-badge">
+                  {characterFaction.data.title}
+                </a>
+              ) : (
+                <span class="affiliation-badge font-normal text-ink-grey/70">{(entry.data as any).affiliation}</span>
+              )
+            )}
             {(entry.data as any).novel && <span class="novel-badge">出處：《{(entry.data as any).novel}》</span>}
           </div>
         )}
@@ -82,6 +119,20 @@ const guoxueCatMap = {
               {(guoxueCatMap as any)[(entry.data as any).category] || (entry.data as any).category}
             </span>
             {(entry.data as any).source && <span class="source-badge">典籍：{(entry.data as any).source}</span>}
+          </div>
+        )}
+
+        {type === 'worldview' && (
+          <div class="detail-meta">
+            <span class="category-badge">世界觀設定</span>
+            {(entry.data as any).category && <span class="source-badge">分類：{(entry.data as any).category}</span>}
+          </div>
+        )}
+
+        {type === 'factions' && (
+          <div class="detail-meta">
+            <span class="category-badge font-semibold">勢力與組織</span>
+            {(entry.data as any).category && <span class="source-badge">類別：{(entry.data as any).category}</span>}
           </div>
         )}
 
@@ -97,9 +148,75 @@ const guoxueCatMap = {
       <div class="markdown-body">
         <Content />
       </div>
+
+      {type === 'factions' && factionMembers.length > 0 && (
+        <div class="faction-members-section">
+          <div class="mountain-line"></div>
+          <h2 class="members-section-title cursive-title">旗下豪傑 / 登場人物</h2>
+          <div class="members-grid" id="members-grid">
+            {factionMembers.map((char, index) => (
+              <a 
+                href={`${import.meta.env.BASE_URL}shanzhuang/characters/${char.slug}`} 
+                class={`member-card paper-card ${index >= 12 ? 'collapsed-member hidden' : ''}`}
+                data-index={index}
+              >
+                <div>
+                  <span class="member-name">{char.data.name}</span>
+                  {char.data.alias && char.data.alias.length > 0 && (
+                    <p class="member-alias">{char.data.alias.join(' / ')}</p>
+                  )}
+                </div>
+                <span class="view-profile-btn">生平誌 →</span>
+              </a>
+            ))}
+          </div>
+
+          {factionMembers.length > 12 && (
+            <div class="expand-btn-wrapper">
+              <button id="toggle-members-btn" class="ink-expand-btn cursive-title" data-collapsed="true">
+                展開旗下豪傑 ({factionMembers.length - 12}人)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   </article>
 </Layout>
+
+<script>
+  // 旗下豪傑展開與收合邏輯
+  const toggleBtn = document.getElementById('toggle-members-btn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const collapsedMembers = document.querySelectorAll('.collapsed-member');
+      const isCollapsed = toggleBtn.getAttribute('data-collapsed') !== 'false';
+      
+      collapsedMembers.forEach(el => {
+        if (isCollapsed) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+      
+      if (isCollapsed) {
+        toggleBtn.setAttribute('data-collapsed', 'false');
+        toggleBtn.textContent = '收合旗下豪傑';
+      } else {
+        toggleBtn.setAttribute('data-collapsed', 'true');
+        const count = collapsedMembers.length;
+        toggleBtn.textContent = `展開旗下豪傑 (${count}人)`;
+        
+        // 滾動回到成員區塊頂部，改善體驗
+        const section = document.querySelector('.faction-members-section');
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    });
+  }
+</script>
 
 <style>
   .detail-container {
@@ -251,5 +368,119 @@ const guoxueCatMap = {
     .detail-title {
       font-size: 1.8rem;
     }
+  }
+
+  /* 雙向關聯 Badge 連結 */
+  .affiliation-badge.ink-link-badge {
+    background: rgba(45, 95, 90, 0.08);
+    color: var(--color-mountain-cyan);
+    border: 1px solid rgba(45, 95, 90, 0.2);
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: var(--transition-fast);
+  }
+  
+  .affiliation-badge.ink-link-badge:hover {
+    background: var(--color-mountain-cyan);
+    color: var(--color-paper-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(45, 95, 90, 0.15);
+  }
+
+  /* 勢力成員區塊 */
+  .faction-members-section {
+    margin-top: 3rem;
+  }
+  
+  .members-section-title {
+    font-size: 1.5rem;
+    color: var(--color-mountain-cyan);
+    margin-bottom: 1.5rem;
+  }
+  
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .member-card {
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: var(--transition-smooth);
+    border: 1px dashed var(--color-border);
+    border-radius: 4px;
+    height: 100%;
+  }
+  
+  .member-card:hover {
+    transform: translateY(-2px);
+    border-style: solid;
+    border-color: rgba(61, 126, 90, 0.4);
+    box-shadow: 0 6px 20px rgba(61, 126, 90, 0.06);
+  }
+  
+  .member-name {
+    font-size: 1.1rem;
+    color: var(--color-ink-black);
+    font-family: var(--font-cursive);
+    font-weight: bold;
+  }
+  
+  .member-alias {
+    font-size: 0.8rem;
+    color: var(--color-ink-grey);
+    margin-top: 0.2rem;
+    font-style: italic;
+    line-height: 1.4;
+  }
+  
+  .view-profile-btn {
+    font-size: 0.8rem;
+    color: var(--color-mountain-cyan);
+    margin-top: 0.8rem;
+    font-weight: 600;
+  }
+
+  /* 旗下豪傑折疊與水墨風按鈕 */
+  .collapsed-member.hidden {
+    display: none !important;
+  }
+
+  .expand-btn-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+  
+  .ink-expand-btn {
+    background: transparent;
+    border: 1px solid var(--color-ink-grey);
+    color: var(--color-ink-black);
+    padding: 0.6rem 2.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    position: relative;
+    transition: var(--transition-smooth);
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 240, 240, 0.5));
+  }
+  
+  .ink-expand-btn:hover {
+    color: var(--color-mountain-cyan);
+    border-color: var(--color-mountain-cyan);
+    box-shadow: 0 4px 12px rgba(45, 95, 90, 0.1);
+    transform: translateY(-1px);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(225, 235, 232, 0.6));
+  }
+
+  .ink-expand-btn:active {
+    transform: translateY(1px);
   }
 </style>

@@ -108,6 +108,30 @@ export default config({
         content: fields.markdoc({ label: '詳細人物傳記 / 設定' }),
       },
     }),
+    worldview: collection({
+      label: '世界觀設定 (山莊)',
+      slugField: 'title',
+      path: 'src/content/worldview/*',
+      format: { contentField: 'content' },
+      schema: {
+        title: fields.slug({ name: { label: '設定標題' } }),
+        category: fields.text({ label: '分類 (例：機制、地理、神明體系)' }),
+        pubDate: fields.date({ label: '建立日期' }),
+        content: fields.markdoc({ label: '詳細設定內文' }),
+      },
+    }),
+    factions: collection({
+      label: '勢力組織 (山莊)',
+      slugField: 'title',
+      path: 'src/content/factions/*',
+      format: { contentField: 'content' },
+      schema: {
+        title: fields.slug({ name: { label: '勢力名稱' } }),
+        category: fields.text({ label: '分類 (例：正派、地下、世俗、中立)' }),
+        pubDate: fields.date({ label: '建立日期' }),
+        content: fields.markdoc({ label: '詳細勢力內文' }),
+      },
+    }),
     guoxue: collection({
       label: '國學筆記 (山莊)',
       slugField: 'title',

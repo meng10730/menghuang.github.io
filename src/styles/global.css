@@ -161,3 +161,18 @@ a:hover {
   opacity: 0.4;
   margin: 1.5rem 0;
 }
+
+/* 失效的 Obsidian 連結降級樣式 */
+.broken-link {
+  color: var(--color-ink-grey);
+  border-bottom: 1px dashed rgba(92, 92, 92, 0.4);
+  cursor: help;
+  opacity: 0.75;
+  transition: var(--transition-fast);
+}
+
+.broken-link:hover {
+  color: var(--color-ink-black);
+  opacity: 1;
+}
+
