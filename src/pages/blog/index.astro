@@ -17,13 +17,13 @@ const formatDate = (date: Date) => {
 };
 ---
 
-<Layout title="觀其文 | 賽博山莊部落格" description="探尋代碼乾坤與武俠人生的筆記，記錄唐門子弟的修行感悟。">
+<Layout title="觀其文 | 來看看晚餐飯後的作品吧" description="這是晚餐利用零碎時間寫的文章，紀錄書籍與日常見聞。">
   <div class="blog-container">
     
     <!-- 頁面書法標題 -->
     <header class="blog-header ink-fade-in">
       <h1 class="cursive-title page-title">觀其文</h1>
-      <p class="blog-desc">靜水流深，墨跡書心。此處記錄江湖見聞與修行心得。</p>
+      <p class="blog-desc">靜水帶綠，墨跡書心。此處記錄江湖見聞與閱讀心得。</p>
       <div class="mountain-line"></div>
     </header>
 
@@ -31,7 +31,7 @@ const formatDate = (date: Date) => {
     <div class="posts-timeline ink-fade-in" style="animation-delay: 0.2s;">
       {posts.length === 0 ? (
         <div class="paper-card no-posts">
-          <p>山莊尚無書信墨跡，容日後添置。</p>
+          <p>後山尚無存書，容日後添置。</p>
         </div>
       ) : (
         <div class="timeline-wrapper">
