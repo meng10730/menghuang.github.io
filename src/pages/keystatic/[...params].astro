@@ -1,9 +1,10 @@
 ---
-import { makePage } from '@keystatic/astro/ui';
-import keystaticConfig from '../../../keystatic.config';
+import { KeystaticApp } from '../../components/KeystaticApp';
 
-export const all = makePage(keystaticConfig);
-
-export const prerender = false;
+export function getStaticPaths() {
+  return [
+    { params: { params: undefined } }
+  ];
+}
 ---
-<all.Keystatic />
+<KeystaticApp client:only="react" />

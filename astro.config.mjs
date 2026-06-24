@@ -12,8 +12,8 @@ export default defineConfig({
   base: '/',
   integrations: [
     react(),
-    ...(process.env.npm_lifecycle_event === 'dev' ? [keystatic()] : []),
+    keystatic(),
     mdx()
   ],
-  output: process.env.npm_lifecycle_event === 'dev' ? 'hybrid' : 'static',
+  output: 'static',
 });

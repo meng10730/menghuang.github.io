@@ -5,4 +5,8 @@ export const all = makeAPIRouteHandler({
   config: keystaticConfig,
 });
 
-export const prerender = false;
+export function getStaticPaths() {
+  return [
+    { params: { params: undefined } }
+  ];
+}
