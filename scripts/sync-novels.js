@@ -182,6 +182,9 @@ function runSync() {
   let syncCount = 0;
   externalFiles.forEach(file => {
     const mapInfo = config.mappings[file];
+    if (mapInfo.collection === 'characters' && !mapInfo.name && mapInfo.title) {
+      mapInfo.name = mapInfo.title;
+    }
     const fullSourcePath = path.join(SOURCE_DIR, file);
     let content = fs.readFileSync(fullSourcePath, 'utf8');
 
@@ -220,7 +223,7 @@ function runSync() {
     const frontmatter = toYAML(mapInfo);
     
     // 3c. 組合唯讀提示語與檔案內容
-    const finalFileContent = `<!-- 此檔案由同步腳本自動產生，請勿在此直接修改 -->\n${frontmatter}\n\n${content}`;
+    const finalFileContent = `${frontmatter}\n<!-- 此檔案由同步腳本自動產生，請勿在此直接修改 -->\n\n${content}`;
 
     // 3d. 寫入專案目標目錄
     const targetDir = path.join(TARGET_BASE_DIR, mapInfo.collection);

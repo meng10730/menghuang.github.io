@@ -15,22 +15,22 @@ export async function getStaticPaths() {
 const { type } = Astro.params;
 const { title, subtitle } = Astro.props;
 
-const items = await getCollection(type as any, entry => !entry.id.startsWith('_'));
+const items = await getCollection(type as any, (entry: any) => !entry.id.startsWith('_'));
 
 // 排序：預設按發布日期排序（如果有）
-items.sort((a, b) => {
+items.sort((a: any, b: any) => {
   const dateA = new Date((a.data as any).pubDate || 0).getTime();
   const dateB = new Date((b.data as any).pubDate || 0).getTime();
   return dateB - dateA;
 });
 
-const novelStatusMap = {
+const novelStatusMap: Record<string, string> = {
   ongoing: '連載中',
   completed: '已完結',
   hiatus: '暫停中'
 };
 
-const guoxueCatMap = {
+const guoxueCatMap: Record<string, string> = {
   confucianism: '儒家',
   taoism: '道家',
   buddhism: '佛家',
@@ -58,7 +58,7 @@ const guoxueCatMap = {
       </div>
     ) : (
       <div class="villa-grid">
-        {items.map(item => {
+        {items.map((item: any) => {
           const slug = item.slug;
           const data = item.data as any;
           return (
@@ -71,7 +71,7 @@ const guoxueCatMap = {
                     </span>
                     {data.genre && (
                       <span class="genre-tags">
-                        {data.genre.map(g => (
+                        {data.genre.map((g: any) => (
                           <span class="genre-tag">#{g}</span>
                         ))}
                       </span>
@@ -118,14 +118,14 @@ const guoxueCatMap = {
               {type === 'novels' && <p class="card-desc">{data.description}</p>}
               {type === 'characters' && data.tags && (
                 <div class="char-tags">
-                  {data.tags.map(t => (
+                  {data.tags.map((t: any) => (
                     <span class="char-tag">{t}</span>
                   ))}
                 </div>
               )}
               {type === 'guoxue' && data.tags && (
                 <div class="note-tags">
-                  {data.tags.map(t => (
+                  {data.tags.map((t: any) => (
                     <span class="note-tag">{t}</span>
                   ))}
                 </div>

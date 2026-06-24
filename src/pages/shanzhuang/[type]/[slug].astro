@@ -52,7 +52,7 @@ if (type === 'characters') {
   }
 }
 
-let factionMembers = [];
+let factionMembers: any[] = [];
 if (type === 'factions') {
   factionMembers = characters.filter(char => {
     const aff = char.data.affiliation;
