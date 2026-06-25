@@ -6,6 +6,7 @@
   <!-- 提示文字，懸停時顯示 -->
   <span class="player-tooltip" id="player-tooltip">開啟背景音樂</span>
   
+  <!-- 背景音樂控制鈕 -->
   <button class="music-toggle-btn" id="music-toggle" aria-label="切換背景音樂">
     <!-- 水墨音波跳動線條 -->
     <div class="wave-bar"></div>
@@ -13,8 +14,13 @@
     <div class="wave-bar"></div>
     <div class="wave-bar"></div>
   </button>
+
+  <!-- 按鍵音效控制鈕 -->
+  <button class="sfx-toggle-btn-global" id="sfx-toggle-global" aria-label="切換按鍵音效">
+    <span class="sfx-status-icon" id="sfx-status-icon">🔔</span>
+  </button>
   
-  <!-- 隱藏的 audio 元素，啟用 data-astro-transition-persist 以確保跨頁跳轉不中斷 -->
+  <!-- 隱藏的 audio 元素，預設 data-astro-transition-persist 以確保跨頁跳轉不中斷 -->
   <audio 
     id="main-bgm" 
     src="https://assets.mixkit.co/music/preview/mixkit-traditional-oriental-cherry-blossoms-1488.mp3" 
@@ -65,8 +71,8 @@
     transform: translateX(0);
   }
 
-  /* 音樂切換按鈕，設計成水墨圓章外觀 */
-  .music-toggle-btn {
+  /* 控制按鈕，設計成水墨圓章外觀 */
+  .music-toggle-btn, .sfx-toggle-btn-global {
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -76,16 +82,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 0 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     transition: var(--transition-smooth);
   }
 
-  .music-toggle-btn:hover {
+  .music-toggle-btn {
+    gap: 3px;
+    padding: 0 10px;
+  }
+
+  .sfx-toggle-btn-global {
+    font-size: 1.25rem;
+    color: var(--color-ink-black);
+  }
+
+  .music-toggle-btn:hover, .sfx-toggle-btn-global:hover {
     background: var(--color-paper-light);
-    border-color: var(--color-mountain-green);
+    border-color: var(--color-mountain-cyan);
     transform: scale(1.05);
+  }
+
+  /* 停用狀態的按鍵音按鈕，呈灰墨色 */
+  .sfx-toggle-btn-global.muted {
+    border-color: rgba(92, 92, 92, 0.35);
+    color: var(--color-ink-grey);
+    background: rgba(240, 240, 240, 0.65);
+    box-shadow: none;
   }
 
   /* 極簡音波跳動線條 */
@@ -142,7 +164,7 @@
       bottom: 1.5rem;
       right: 1.5rem;
     }
-    .music-toggle-btn {
+    .music-toggle-btn, .sfx-toggle-btn-global {
       width: 40px;
       height: 40px;
     }
@@ -155,50 +177,80 @@
 <script>
   function initAudioPlayer() {
     const audio = document.getElementById('main-bgm') as HTMLAudioElement;
-    const button = document.getElementById('music-toggle');
+    const musicBtn = document.getElementById('music-toggle');
+    const sfxBtn = document.getElementById('sfx-toggle-global');
+    const sfxIcon = document.getElementById('sfx-status-icon');
     const tooltip = document.getElementById('player-tooltip');
 
-    if (!audio || !button) return () => {};
+    if (!audio || !musicBtn || !sfxBtn) return () => {};
 
-    // 同步按鈕的 UI 狀態與音訊的播放狀態
-    const updateButtonUI = () => {
+    // 1. 同步背景音樂按鈕的 UI 狀態
+    const updateMusicUI = () => {
       if (audio.paused) {
-        button.classList.remove('playing');
-        if (tooltip) tooltip.textContent = '開啟背景音樂';
+        musicBtn.classList.remove('playing');
       } else {
-        button.classList.add('playing');
-        if (tooltip) tooltip.textContent = '關閉背景音樂';
+        musicBtn.classList.add('playing');
       }
     };
 
-    // 點擊按鈕切換播放/暫停
-    const togglePlay = () => {
+    const toggleMusic = () => {
       if (audio.paused) {
-        // 現代瀏覽器限制：必須由使用者互動觸發 play()
-        audio.play().then(updateButtonUI).catch((err) => {
+        audio.play().then(updateMusicUI).catch((err) => {
           console.log('音樂播放失敗，可能需要更多使用者互動：', err);
         });
       } else {
         audio.pause();
-        updateButtonUI();
+        updateMusicUI();
       }
     };
 
-    button.addEventListener('click', togglePlay);
+    musicBtn.addEventListener('click', toggleMusic);
+    audio.addEventListener('play', updateMusicUI);
+    audio.addEventListener('pause', updateMusicUI);
 
-    // 當音樂載入、播放或暫停時同步 UI 狀態
-    audio.addEventListener('play', updateButtonUI);
-    audio.addEventListener('pause', updateButtonUI);
+    // 2. 同步全域按鍵音效的 UI 狀態
+    const updateSfxUI = () => {
+      const isEnabled = localStorage.getItem('shanzhuang_sfx_click_enabled') !== 'false';
+      if (isEnabled) {
+        sfxBtn.classList.remove('muted');
+        if (sfxIcon) sfxIcon.textContent = '🔔';
+      } else {
+        sfxBtn.classList.add('muted');
+        if (sfxIcon) sfxIcon.textContent = '🔕';
+      }
+    };
+
+    const toggleSfx = () => {
+      const isEnabled = localStorage.getItem('shanzhuang_sfx_click_enabled') !== 'false';
+      localStorage.setItem('shanzhuang_sfx_click_enabled', isEnabled ? 'false' : 'true');
+      updateSfxUI();
+    };
+
+    sfxBtn.addEventListener('click', toggleSfx);
+
+    // 3. 動態更新 Tooltip 提示內容
+    const handleMusicTooltip = () => {
+      if (tooltip) tooltip.textContent = audio.paused ? '開啟背景音樂' : '關閉背景音樂';
+    };
+    const handleSfxTooltip = () => {
+      const isEnabled = localStorage.getItem('shanzhuang_sfx_click_enabled') !== 'false';
+      if (tooltip) tooltip.textContent = isEnabled ? '關閉按鍵音效' : '開啟按鍵音效';
+    };
+
+    musicBtn.addEventListener('mouseenter', handleMusicTooltip);
+    sfxBtn.addEventListener('mouseenter', handleSfxTooltip);
 
     // 初始狀態同步
-    updateButtonUI();
+    updateMusicUI();
+    updateSfxUI();
 
-    // 回傳清理函數，但因為 ViewTransitions 設定了 persist，
-    // 我們需要確保事件監聽器在頁面跳轉時不重複綁定。
     return () => {
-      button.removeEventListener('click', togglePlay);
-      audio.removeEventListener('play', updateButtonUI);
-      audio.removeEventListener('pause', updateButtonUI);
+      musicBtn.removeEventListener('click', toggleMusic);
+      audio.removeEventListener('play', updateMusicUI);
+      audio.removeEventListener('pause', updateMusicUI);
+      sfxBtn.removeEventListener('click', toggleSfx);
+      musicBtn.removeEventListener('mouseenter', handleMusicTooltip);
+      sfxBtn.removeEventListener('mouseenter', handleSfxTooltip);
     };
   }
 

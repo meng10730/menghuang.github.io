@@ -311,8 +311,8 @@ const {
 
         function playClickSfx(type) {
           try {
-            const bgm = document.getElementById('main-bgm');
-            if (bgm && bgm.paused) return; // 靜音同步：BGM 暫停時不播放按鍵音
+            // 獨立讀取 LocalStorage 開關 (預設啟用)
+            if (localStorage.getItem('shanzhuang_sfx_click_enabled') === 'false') return;
 
             if (!audioCtx) {
               initWebAudioSfx().then(() => triggerBufferPlay(type));

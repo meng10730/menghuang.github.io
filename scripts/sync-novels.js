@@ -320,6 +320,10 @@ function runSync() {
       writeBackCount++;
     } else if (shouldSyncExternalToLocal) {
       let content = externalContent;
+      
+      // 剝離外部 Markdown 原本已有的 YAML Frontmatter，僅保留純內文
+      const parsedExternal = parseLocalMarkdown(content);
+      content = parsedExternal.content;
 
       // 2a. 解析雙向連結
       content = content.replace(/\[\[([^\]|#]+)(#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (match, baseTerm, anchor, aliasPart) => {
