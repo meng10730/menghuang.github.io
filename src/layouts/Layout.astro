@@ -383,50 +383,49 @@ const {
           source.start(0);
         }
 
-        function setupGlobalClickSfx() {
-          // 防止 Astro ViewTransitions 頁面跳轉時重複綁定 click 事件造成的音量與音軌重疊
-          if ((window as any).__sfx_initialized) return;
-          (window as any).__sfx_initialized = true;
+        // 首次點擊網頁任意位置自動觸發預載入解碼，並自動移除自身
+        function initOnFirstClick() {
+          initWebAudioSfx();
+          document.removeEventListener("click", initOnFirstClick);
+        }
 
-          // 初始化音訊解碼 (配合瀏覽器安全策略限制，於首次點擊或交互時自動加載)
-          document.addEventListener(
-            "click",
-            function initOnFirstClick() {
-              initWebAudioSfx();
-              document.removeEventListener("click", initOnFirstClick);
-            },
-            { once: true },
+        // 具名全域事件代理監聽器，防止 Astro ViewTransitions 跳轉頁面時重複綁定
+        function globalClickListener(e) {
+          const target = e.target;
+          if (!target) return;
+
+          const clickable = target.closest(
+            "a, button, .scroll-card, .member-card, .ink-expand-btn",
           );
+          if (!clickable) return;
 
-          // 全域事件代理監聽
-          document.addEventListener("click", function (e) {
-            const target = e.target;
-            if (!target) return;
+          // 1. 壞連結 / 未登記設定 (LowVoice)
+          if (clickable.classList.contains("broken-link")) {
+            playClickSfx("low");
+            return;
+          }
 
-            const clickable = target.closest(
-              "a, button, .scroll-card, .member-card, .ink-expand-btn",
-            );
-            if (!clickable) return;
+          // 2. 展開 / 收合 / 特殊開關 (HighVoice)
+          if (
+            clickable.id === "toggle-members-btn" ||
+            clickable.id === "music-toggle" ||
+            clickable.classList.contains("ink-expand-btn")
+          ) {
+            playClickSfx("high");
+            return;
+          }
 
-            // 1. 壞連結 / 未登記設定 (LowVoice)
-            if (clickable.classList.contains("broken-link")) {
-              playClickSfx("low");
-              return;
-            }
+          // 3. 一般點擊 (Click2)
+          playClickSfx("normal");
+        }
 
-            // 2. 展開 / 收合 / 特殊開關 (HighVoice)
-            if (
-              clickable.id === "toggle-members-btn" ||
-              clickable.id === "music-toggle" ||
-              clickable.classList.contains("ink-expand-btn")
-            ) {
-              playClickSfx("high");
-              return;
-            }
+        function setupGlobalClickSfx() {
+          // 每次加載頁面時，先移除舊的監聽器，再重新綁定，徹底防範換頁失效與重疊
+          document.removeEventListener("click", globalClickListener);
+          document.removeEventListener("click", initOnFirstClick);
 
-            // 3. 一般點擊 (Click2)
-            playClickSfx("normal");
-          });
+          document.addEventListener("click", globalClickListener);
+          document.addEventListener("click", initOnFirstClick);
         }
 
         function initAdminNav() {
