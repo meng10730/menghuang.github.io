@@ -199,7 +199,6 @@
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     // 自動微風水墨（偶爾隨機在畫面各處產生輕微的滴墨效果，增加動態生機）
-    let autoTimer = 0;
     const autoDrip = () => {
       if (!active) return;
       if (Math.random() < (isMobile ? 0.02 : 0.05)) {

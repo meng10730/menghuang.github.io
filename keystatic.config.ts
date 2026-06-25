@@ -2,7 +2,8 @@ import { config, fields, collection } from '@keystatic/core';
 
 export default config({
   storage: {
-    kind: 'local',
+    kind: 'github',
+    repo: 'meng10730/meng10730.github.io',
   },
   collections: {
     blog: collection({
@@ -18,7 +19,7 @@ export default config({
           label: '標籤',
           itemLabel: props => props.value,
         }),
-        content: fields.markdoc({ label: '內文' }),
+        content: fields.mdx({ label: '內文', extension: 'md' }),
       },
     }),
     works: collection({
@@ -54,7 +55,7 @@ export default config({
         github: fields.url({ label: 'GitHub 連結 (選填)' }),
         demo: fields.url({ label: 'Live Demo 連結 (選填)' }),
         pubDate: fields.date({ label: '完成或發布日期' }),
-        content: fields.markdoc({ label: '專案詳細介紹 (內文)' }),
+        content: fields.mdx({ label: '專案詳細介紹 (內文)', extension: 'md' }),
       },
     }),
     novels: collection({
@@ -84,7 +85,7 @@ export default config({
           directory: 'public/images/novels',
           publicPath: '/images/novels',
         }),
-        content: fields.markdoc({ label: '內文 / 大綱' }),
+        content: fields.mdx({ label: '內文 / 大綱', extension: 'md' }),
       },
     }),
     characters: collection({
@@ -105,7 +106,7 @@ export default config({
           itemLabel: props => props.value,
         }),
         pubDate: fields.date({ label: '建立日期' }),
-        content: fields.markdoc({ label: '詳細人物傳記 / 設定' }),
+        content: fields.mdx({ label: '詳細人物傳記 / 設定', extension: 'md' }),
       },
     }),
     worldview: collection({
@@ -117,7 +118,7 @@ export default config({
         title: fields.slug({ name: { label: '設定標題' } }),
         category: fields.text({ label: '分類 (例：機制、地理、神明體系)' }),
         pubDate: fields.date({ label: '建立日期' }),
-        content: fields.markdoc({ label: '詳細設定內文' }),
+        content: fields.mdx({ label: '詳細設定內文', extension: 'md' }),
       },
     }),
     factions: collection({
@@ -129,7 +130,7 @@ export default config({
         title: fields.slug({ name: { label: '勢力名稱' } }),
         category: fields.text({ label: '分類 (例：正派、地下、世俗、中立)' }),
         pubDate: fields.date({ label: '建立日期' }),
-        content: fields.markdoc({ label: '詳細勢力內文' }),
+        content: fields.mdx({ label: '詳細勢力內文', extension: 'md' }),
       },
     }),
     guoxue: collection({
@@ -157,7 +158,7 @@ export default config({
           itemLabel: props => props.value,
         }),
         pubDate: fields.date({ label: '建立日期' }),
-        content: fields.markdoc({ label: '筆記內文' }),
+        content: fields.mdx({ label: '筆記內文', extension: 'md' }),
       },
     }),
   },

@@ -138,11 +138,15 @@ exit /b 0
 echo.
 echo [Error] Conflict detected during git pull --rebase!
 echo.
+git rebase --abort >nul 2>nul
+for /f "tokens=*" %%i in ('powershell -Command "Get-Date -Format 'yyyyMMdd_HHmmss'"') do set "TS=%%i"
+git branch backup/conflict-%TS% >nul 2>nul
 echo ============================================================
 echo                 CONFLICT RESOLUTION GUIDE
 echo ============================================================
 echo  1. The auto-publish process has been safely aborted.
-echo  2. Your local repository has been restored [rebase aborted].
+echo  2. A backup branch [backup/conflict-%TS%] has been created
+echo     to preserve your local commit changes.
 echo  3. To resolve this conflict manually:
 echo     a. Run: git pull origin main
 echo     b. Open conflicted files and resolve the merge markers.
@@ -151,7 +155,6 @@ echo     d. Run: git commit -m "Merge and resolve conflicts"
 echo     e. Run the publish batch file again to publish your changes.
 echo ============================================================
 echo.
-git rebase --abort >nul 2>nul
 pause
 exit /b 1
 

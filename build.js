@@ -1,6 +1,15 @@
-import { execSync } from 'child_process';
+import { build } from 'astro';
 import fs from 'fs-extra';
 import path from 'path';
+
+process.on('uncaughtException', (err) => {
+  console.error('--- BUILD SYSTEM UNCAUGHT EXCEPTION ---');
+  console.error(err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('--- BUILD SYSTEM UNHANDLED REJECTION ---');
+  console.error(reason);
+});
 
 const pathPage = path.resolve('src/pages/keystatic');
 const pathPageTemp = path.resolve('temp-keystatic-page');
@@ -20,9 +29,12 @@ async function run() {
 
   let buildError = null;
   try {
-    console.log('--- Running Astro Build ---');
-    const args = process.argv.slice(2).join(' ');
-    execSync(`npx astro build ${args}`, { stdio: 'inherit' });
+    console.log('--- Running Astro Build (Programmatic) ---');
+    // 強制注入 build 參數，確保 config 判定為生產建置
+    if (!process.argv.includes('build')) {
+      process.argv.push('build');
+    }
+    await build({});
   } catch (err) {
     buildError = err;
   } finally {
@@ -38,7 +50,8 @@ async function run() {
   }
 
   if (buildError) {
-    console.error('Build failed!');
+    console.error('Build failed with error:');
+    console.error(buildError);
     process.exit(1);
   } else {
     console.log('Build completed successfully!');

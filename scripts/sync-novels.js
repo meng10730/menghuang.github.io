@@ -16,6 +16,69 @@ if (!fs.existsSync(CONFIG_FILE)) {
 // 載入設定
 const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
 
+// 輔助函數：標準化內容 (統一換行符為 \n，去除行尾空白，去除首尾空白)
+function normalizeContent(str) {
+  return str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').map(line => line.trimEnd()).join('\n').trim();
+}
+
+// 輔助函數：解析本地 Markdown，分離 frontmatter 與 content，過濾警語註解
+function parseLocalMarkdown(fileContent) {
+  const lines = fileContent.split(/\r?\n/);
+  let inFrontmatter = false;
+  let frontmatterLines = [];
+  let contentLines = [];
+  let delimiterCount = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '---') {
+      delimiterCount++;
+      if (delimiterCount === 1) {
+        inFrontmatter = true;
+        continue;
+      } else if (delimiterCount === 2) {
+        inFrontmatter = false;
+        continue;
+      }
+    }
+    
+    if (inFrontmatter) {
+      frontmatterLines.push(line);
+    } else {
+      if (line.includes('<!-- 此檔案由同步腳本自動產生') || line.includes('請勿在此直接修改 -->')) {
+        continue;
+      }
+      contentLines.push(line);
+    }
+  }
+  
+  return {
+    frontmatter: frontmatterLines.join('\n'),
+    content: contentLines.join('\n').trim()
+  };
+}
+
+// 輔助函數：反向還原網頁連結至 Obsidian 雙括號格式
+function restoreObsidianLinks(content, slugToOriginalName) {
+  // 1. 還原失效連結
+  let restored = content.replace(/<span class="broken-link"[^>]*>(.*?)<\/span>/g, '[[$1]]');
+  
+  // 2. 還原有效連結：[別名](/shanzhuang/collection/slug#anchor) -> [[原始名稱#anchor|別名]]
+  restored = restored.replace(/\[([^\]]+)\]\(\/shanzhuang\/[^/]+\/([^)#?\s]+)(#[^)#?\s]+)?\)/g, (_match, alias, slug, anchor) => {
+    const cleanAnchor = anchor ? anchor : '';
+    const lowerSlug = slug.toLowerCase();
+    const originalName = slugToOriginalName[lowerSlug] || slug;
+    
+    if (alias === originalName) {
+      return `[[${originalName}${cleanAnchor}]]`;
+    } else {
+      return `[[${originalName}${cleanAnchor}|${alias}]]`;
+    }
+  });
+  
+  return restored;
+}
+
 // Check unique titles and slugs to prevent overwrite and link mismatch
 const titleMap = new Map();
 const slugMap = new Map();
@@ -141,102 +204,159 @@ function runSync() {
   });
 
   if (missingFiles.length > 0) {
-    console.error(`\n❌ [同步中斷] 偵測到有 ${missingFiles.length} 個檔案未登記在 sync-config.json 中：`);
+    console.warn(`\x1b[33m⚠️  [警告] 偵測到有 ${missingFiles.length} 篇新文章可執行一鍵匯入 (一鍵匯入.bat)：\x1b[0m`);
     missingFiles.forEach(file => {
-      console.error(`   - ${file}`);
+      console.warn(`\x1b[33m   - ${file}\x1b[0m`);
     });
-    
-    console.error(`\n💡 請在 sync-config.json 的 "mappings" 中加上對應設定，例如：`);
-    console.error(JSON.stringify(
-      {
-        [missingFiles[0]]: {
-          collection: "worldview",
-          slug: path.basename(missingFiles[0], '.md').replace(/^\d+_/g, ''),
-          title: path.basename(missingFiles[0], '.md').replace(/^\d+_/g, ''),
-          category: "世界觀",
-          pubDate: new Date().toISOString().split('T')[0]
-        }
-      },
-      null,
-      2
-    ));
-    process.exit(1);
+  } else {
+    console.log(`✓ 檔案登記檢查通過！`);
   }
-
-  console.log(`✓ 檔案登記檢查通過！`);
 
   // 2. 建立標題/檔名對應表，用以解析雙向連結
   const titleToConfig = {};
   const slugToConfig = {};
   const fileToConfig = {};
+  const slugToOriginalName = {};
 
   for (const [relPath, mapInfo] of Object.entries(config.mappings)) {
     const baseNameNoExt = path.basename(relPath, '.md');
     
     fileToConfig[baseNameNoExt] = mapInfo;
     if (mapInfo.title) titleToConfig[mapInfo.title] = mapInfo;
-    if (mapInfo.slug) slugToConfig[mapInfo.slug] = mapInfo;
+    if (mapInfo.slug) {
+      const lowerSlug = mapInfo.slug.toLowerCase();
+      slugToConfig[lowerSlug] = mapInfo;
+      slugToOriginalName[lowerSlug] = baseNameNoExt;
+    }
   }
 
-  // 3. 處理與複製檔案
-  let syncCount = 0;
+  // 3. 處理與複製檔案 (雙向同步機制)
+  let syncCount = 0;       // 外部 -> 本地 (覆蓋/同步)
+  let writeBackCount = 0;  // 本地 -> 外部 (備份/回寫)
+  let skipCount = 0;       // 內容無變更 (跳過)
+
   externalFiles.forEach(file => {
     const mapInfo = config.mappings[file];
+    if (!mapInfo) return; // 跳過未登記的檔案，不執行同步
+
     if (mapInfo.collection === 'characters' && !mapInfo.name && mapInfo.title) {
       mapInfo.name = mapInfo.title;
     }
     const fullSourcePath = path.join(SOURCE_DIR, file);
-    let content = fs.readFileSync(fullSourcePath, 'utf8');
-
-    // 3a. 解析雙向連結 [[檔案名稱|別名]] 或 [[檔案名稱#錨點|別名]]
-    // Regex 說明：\[\[([^\]|#]*)(#[^\]|]*)?(\|[^\]]*)?\]\]
-    // baseTerm: 連結主體
-    // anchor: 錨點 (含 #, 選填)
-    // aliasPart: 別名 (含 |, 選填)
-    content = content.replace(/\[\[([^\]|#]+)(#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (match, baseTerm, anchor, aliasPart) => {
-      const cleanBaseTerm = baseTerm.replace(/\.md$/i, '').trim();
-      const cleanAnchor = anchor ? anchor.trim() : '';
-      const cleanAlias = aliasPart ? aliasPart.replace(/^\|/, '').trim() : '';
-
-      let targetMapping = fileToConfig[cleanBaseTerm] || titleToConfig[cleanBaseTerm] || slugToConfig[cleanBaseTerm];
-
-      if (targetMapping) {
-        // 組成跳轉路徑：/shanzhuang/[collection]/[slug][anchor]
-        const displayTitle = cleanAlias || targetMapping.title || cleanBaseTerm;
-        const linkPath = `/shanzhuang/${targetMapping.collection}/${targetMapping.slug}${cleanAnchor}`;
-        return `[${displayTitle}](${linkPath})`;
-      } else {
-        // 找不到對照，優先降級為別名；無別名則降級為主體名稱，並印出警告，且改為帶有 broken-link 樣式的 HTML
-        const fallbackText = cleanAlias || cleanBaseTerm;
-        console.warn(`⚠️  [警告] 檔案 "${file}" 中的連結 "${match}" 無法在對照表中解析，已降級為失效標籤 "${fallbackText}"。`);
-        return `<span class="broken-link" title="此條目暫無詳細設定">${fallbackText}</span>`;
-      }
-    });
-
-    // 3b. 注入 Frontmatter
-    // 設定預設 pubDate
-    if (!mapInfo.pubDate) {
-      const stat = fs.statSync(fullSourcePath);
-      mapInfo.pubDate = stat.mtime.toISOString().split('T')[0];
-    }
-    
-    const frontmatter = toYAML(mapInfo);
-    
-    // 3c. 組合唯讀提示語與檔案內容
-    const finalFileContent = `${frontmatter}\n<!-- 此檔案由同步腳本自動產生，請勿在此直接修改 -->\n\n${content}`;
-
-    // 3d. 寫入專案目標目錄
     const targetDir = path.join(TARGET_BASE_DIR, mapInfo.collection);
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-    
     const targetFilePath = path.join(targetDir, `${mapInfo.slug}.md`);
-    fs.writeFileSync(targetFilePath, finalFileContent, 'utf8');
-    syncCount++;
+
+    let externalContent = fs.existsSync(fullSourcePath) ? fs.readFileSync(fullSourcePath, 'utf8') : '';
+    let localContent = fs.existsSync(targetFilePath) ? fs.readFileSync(targetFilePath, 'utf8') : '';
+
+    let shouldSyncLocalToExternal = false;
+    let shouldSyncExternalToLocal = false;
+
+    if (localContent && externalContent) {
+      // 兩邊都存在，做正文內容還原比對
+      const parsedLocal = parseLocalMarkdown(localContent);
+      const restoredLocalBody = restoreObsidianLinks(parsedLocal.content, slugToOriginalName);
+
+      if (normalizeContent(restoredLocalBody) !== normalizeContent(externalContent)) {
+        // 內容實質不一致，比較檔案修改時間
+        const localStat = fs.statSync(targetFilePath);
+        const externalStat = fs.statSync(fullSourcePath);
+
+        if (localStat.mtimeMs > externalStat.mtimeMs) {
+          shouldSyncLocalToExternal = true;
+        } else {
+          shouldSyncExternalToLocal = true;
+        }
+      } else {
+        // 內容實質一致，直接跳過，避開 Git 操作產生的假時間戳假同步
+        skipCount++;
+      }
+    } else if (externalContent) {
+      // 只有外部有，正常同步到本地
+      shouldSyncExternalToLocal = true;
+    } else if (localContent) {
+      // 只有本地有 (理論上不應發生，除非手動新建，反寫回外部)
+      shouldSyncLocalToExternal = true;
+    }
+
+    // 執行同步決策
+    if (shouldSyncLocalToExternal) {
+      const parsedLocal = parseLocalMarkdown(localContent);
+      const restoredLocalBody = restoreObsidianLinks(parsedLocal.content, slugToOriginalName);
+
+      // 自動產生時間戳 .bak 備份檔案，防止意外覆寫，並限制最多保留最近 3 次備份
+      if (fs.existsSync(fullSourcePath)) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupPath = `${fullSourcePath}.${timestamp}.bak`;
+        fs.copyFileSync(fullSourcePath, backupPath);
+
+        const dir = path.dirname(fullSourcePath);
+        const baseName = path.basename(fullSourcePath);
+        const bakFiles = fs.readdirSync(dir)
+          .filter(f => f.startsWith(baseName) && f.endsWith('.bak') && f !== baseName)
+          .map(f => ({
+            name: f,
+            path: path.join(dir, f),
+            mtime: fs.statSync(path.join(dir, f)).mtimeMs
+          }));
+
+        bakFiles.sort((a, b) => a.mtime - b.mtime);
+
+        if (bakFiles.length > 3) {
+          const filesToDelete = bakFiles.slice(0, bakFiles.length - 3);
+          for (const f of filesToDelete) {
+            fs.unlinkSync(f.path);
+          }
+        }
+      }
+
+      fs.writeFileSync(fullSourcePath, restoredLocalBody, 'utf8');
+      console.log(`📝 [回寫] 檢測到本地編輯 (Keystatic)，已備份並反寫至外部: ${file}`);
+      writeBackCount++;
+    } else if (shouldSyncExternalToLocal) {
+      let content = externalContent;
+
+      // 2a. 解析雙向連結
+      content = content.replace(/\[\[([^\]|#]+)(#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (match, baseTerm, anchor, aliasPart) => {
+        const cleanBaseTerm = baseTerm.replace(/\.md$/i, '').trim();
+        const cleanAnchor = anchor ? anchor.trim() : '';
+        const cleanAlias = aliasPart ? aliasPart.replace(/^\|/, '').trim() : '';
+
+        let targetMapping = fileToConfig[cleanBaseTerm] || titleToConfig[cleanBaseTerm] || slugToConfig[cleanBaseTerm.toLowerCase()];
+
+        if (targetMapping) {
+          const displayTitle = cleanAlias || targetMapping.title || cleanBaseTerm;
+          const linkPath = `/shanzhuang/${targetMapping.collection}/${targetMapping.slug}${cleanAnchor}`;
+          return `[${displayTitle}](${linkPath})`;
+        } else {
+          const fallbackText = cleanAlias || cleanBaseTerm;
+          console.warn(`⚠️  [警告] 檔案 "${file}" 中的連結 "${match}" 無法在對照表中解析，已降級為失效標籤 "${fallbackText}"。`);
+          return `<span class="broken-link" title="此條目暫無詳細設定">${fallbackText}</span>`;
+        }
+      });
+
+      // 2b. 注入 Frontmatter
+      if (!mapInfo.pubDate) {
+        const stat = fs.statSync(fullSourcePath);
+        mapInfo.pubDate = stat.mtime.toISOString().split('T')[0];
+      }
+      
+      const frontmatter = toYAML(mapInfo);
+      const finalFileContent = `${frontmatter}\n<!-- 此檔案由同步腳本自動產生，請勿在此直接修改 -->\n\n${content}`;
+
+      // 2c. 寫入專案目標目錄
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      fs.writeFileSync(targetFilePath, finalFileContent, 'utf8');
+      syncCount++;
+    }
   });
 
-  console.log(`\n🎉 [成功] 同步完成！共計同步 ${syncCount} 個設定與連載檔案。`);
+  console.log(`\n🎉 [成功] 雙向同步完成！`);
+  console.log(`   - 外部 -> 本地 (覆蓋/同步): ${syncCount} 個`);
+  console.log(`   - 本地 -> 外部 (備份/回寫): ${writeBackCount} 個`);
+  console.log(`   - 內容無變更 (跳過): ${skipCount} 個`);
 }
 
 runSync();

@@ -77,9 +77,40 @@ const {
                 class="ink-link nav-item">部落格</a
               >
             </li>
+            <li>
+              <a
+                href={`${import.meta.env.BASE_URL}keystatic`}
+                class="ink-link nav-item admin-login-btn"
+                id="admin-login-btn"
+                data-astro-reload
+                >莊主登入</a
+              >
+            </li>
           </ul>
         </nav>
       </header>
+
+      <script is:inline>
+        function checkAdminStatus() {
+          const btn = document.getElementById('admin-login-btn');
+          if (btn) {
+            try {
+              const token = localStorage.getItem('keystatic-github-token');
+              if (token) {
+                btn.textContent = '進入後台';
+                btn.title = '您已登入 GitHub 管理者帳號';
+              } else {
+                btn.textContent = '莊主登入';
+                btn.title = '登入 GitHub 進行文章編輯';
+              }
+            } catch (e) {
+              // 防禦沙箱環境限制
+            }
+          }
+        }
+        document.addEventListener('astro:page-load', checkAdminStatus);
+        checkAdminStatus();
+      </script>
 
       <!-- 主要內容區域 -->
       <main class="site-main">
@@ -149,6 +180,21 @@ const {
 
   .nav-item:hover {
     color: var(--color-mountain-cyan);
+  }
+
+  .admin-login-btn {
+    border: 1px solid rgba(92, 92, 92, 0.25);
+    padding: 0.2rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.95rem !important;
+    background: rgba(92, 92, 92, 0.02);
+    transition: all 0.25s ease;
+  }
+
+  .admin-login-btn:hover {
+    background: rgba(92, 92, 92, 0.07);
+    border-color: var(--color-mountain-cyan);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   }
 
   .site-main {

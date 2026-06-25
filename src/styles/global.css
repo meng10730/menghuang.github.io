@@ -162,17 +162,17 @@ a:hover {
   margin: 1.5rem 0;
 }
 
-/* 失效的 Obsidian 連結降級樣式 */
+/* 失效的 Obsidian 連結降級樣式（視覺上渲染為普通文字，保留 span 以利雙向同步） */
 .broken-link {
-  color: var(--color-ink-grey);
-  border-bottom: 1px dashed rgba(92, 92, 92, 0.4);
-  cursor: help;
-  opacity: 0.75;
-  transition: var(--transition-fast);
+  color: inherit;
+  border-bottom: none;
+  cursor: inherit;
+  opacity: 1;
+  transition: none;
 }
 
 .broken-link:hover {
-  color: var(--color-ink-black);
+  color: inherit;
   opacity: 1;
 }
 
