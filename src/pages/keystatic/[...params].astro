@@ -23,8 +23,66 @@ export function getStaticPaths() {
       }
     })();
   </script>
+  <style>
+    /* 引入霞鶩文楷手寫字型，確保與山莊古風呼應 */
+    @import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-tc-web@latest/style.css');
+
+    .back-to-site-btn {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      z-index: 9999;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(253, 252, 247, 0.95);
+      border: 1.5px solid #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .back-to-site-btn:hover {
+      transform: scale(1.08) rotate(-10deg);
+      border-color: #2d5f5a; /* 石青 */
+      box-shadow: 0 6px 25px rgba(45, 95, 90, 0.15);
+    }
+
+    .btn-stamp-text {
+      font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+      font-size: 0.75rem;
+      font-weight: 900;
+      color: #b22222; /* 朱泥紅 */
+      width: 28px;
+      line-height: 1.1;
+      text-align: center;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .back-to-site-btn {
+        bottom: 1rem;
+        left: 1rem;
+        width: 42px;
+        height: 42px;
+      }
+      .btn-stamp-text {
+        font-size: 0.65rem;
+        width: 24px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- 返回前台水墨圓章按鈕 -->
+  <a href="/" class="back-to-site-btn" id="back-to-site-btn" title="返回唐門山莊前台">
+    <span class="btn-stamp-text">返回山莊</span>
+  </a>
+
   <KeystaticApp client:only="react" />
 </body>
 </html>
