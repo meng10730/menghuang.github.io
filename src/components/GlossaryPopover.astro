@@ -1,0 +1,556 @@
+---
+// GlossaryPopover.astro - 全站網狀百科氣泡控制組件
+// 使用 Base URL，透過客戶端按需 Fetch 加載詞條摘要，防止 DOM 體積膨脹
+const baseUrl = import.meta.env.BASE_URL;
+---
+<div id="glossary-popover" class="glossary-popover hidden" role="tooltip">
+  <div class="popover-arrow"></div>
+  <div class="popover-content">
+    <div class="popover-header">
+      <span class="popover-title"></span>
+      <span class="popover-badge"></span>
+    </div>
+    <p class="popover-desc"></p>
+    <a class="popover-link" href="#">查看詳細設定 ➔</a>
+  </div>
+</div>
+
+<!-- 行動端底部抽屜 (Bottom Sheet) -->
+<div id="glossary-bottom-overlay" class="glossary-bottom-overlay hidden"></div>
+<div id="glossary-bottom-sheet" class="glossary-bottom-sheet hidden">
+  <div class="sheet-drag-indicator"></div>
+  <button class="sheet-close-btn" aria-label="關閉">&times;</button>
+  <div class="sheet-content">
+    <div class="sheet-header">
+      <span class="sheet-title"></span>
+      <span class="sheet-badge"></span>
+    </div>
+    <p class="sheet-desc"></p>
+    <a class="sheet-link" href="#">查看詳細設定 ➔</a>
+  </div>
+</div>
+
+<style>
+  /* 共通字型與基本樣式 */
+  .glossary-popover, .glossary-bottom-sheet {
+    font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+    color: #2c2520;
+  }
+
+  /* 關鍵字樣式：為其套用淡淡的底線與滑鼠指針 */
+  :global(.glossary-term) {
+    border-bottom: 1px dashed #8a6c55;
+    cursor: help;
+    color: #4a3c31;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  :global(.glossary-term:hover) {
+    color: #a63f3f; /* 朱泥色 */
+    border-bottom-color: #a63f3f;
+  }
+
+  /* 電腦端 Popover 樣式 */
+  .glossary-popover {
+    position: absolute;
+    z-index: 1000;
+    max-width: 280px;
+    background: rgba(250, 248, 245, 0.96);
+    border: 1px solid #d9d2c9;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(44, 37, 32, 0.15);
+    padding: 14px;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none; /* 預設不阻擋滑鼠 */
+  }
+
+  /* 當滑鼠移入 Popover 本身時，允許互動（例如點擊連結） */
+  .glossary-popover.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e8e2da;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  .popover-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1a1512;
+  }
+
+  .popover-badge {
+    font-size: 0.75rem;
+    background: #f0ebe4;
+    color: #8c7f73;
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid #e0d9cf;
+  }
+
+  .popover-desc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #594f46;
+    margin: 0 0 10px 0;
+    word-break: break-all;
+  }
+
+  .popover-link {
+    font-size: 0.8rem;
+    color: #a63f3f; /* 朱泥色 */
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+  .popover-link:hover {
+    transform: translateX(2px);
+  }
+
+  /* Popover 箭頭 */
+  .popover-arrow {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(250, 248, 245, 0.96);
+    border-left: 1px solid #d9d2c9;
+    border-bottom: 1px solid #d9d2c9;
+    transform: rotate(-45deg);
+    bottom: -5px;
+    left: 50px; /* 會由 JS 動態計算修正 */
+  }
+
+  /* 行動端 Bottom Sheet 樣式 */
+  .glossary-bottom-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(16, 12, 10, 0.5);
+    z-index: 1001;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .glossary-bottom-overlay.active {
+    opacity: 1;
+  }
+
+  .glossary-bottom-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #faf8f5;
+    border-top: 1px solid #d9d2c9;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    z-index: 1002;
+    padding: 24px 20px 30px 20px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94);
+  }
+  .glossary-bottom-sheet.active {
+    transform: translateY(0);
+  }
+
+  .sheet-drag-indicator {
+    width: 40px;
+    height: 4px;
+    background: #d9d2c9;
+    border-radius: 2px;
+    margin: -12px auto 16px auto;
+  }
+
+  .sheet-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #8c7f73;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #e8e2da;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .sheet-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1a1512;
+  }
+
+  .sheet-badge {
+    font-size: 0.75rem;
+    background: #f0ebe4;
+    color: #8c7f73;
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid #e0d9cf;
+  }
+
+  .sheet-desc {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #594f46;
+    margin: 0 0 16px 0;
+  }
+
+  .sheet-link {
+    font-size: 0.9rem;
+    color: #a63f3f;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-block;
+  }
+</style>
+
+<script define:vars={{ baseUrl }}>
+  // 全域快取，避免重複 Fetch
+  if (!window.glossaryDataCache) {
+    window.glossaryDataCache = null;
+  }
+
+  // 執行全站網狀詞條 DOM 替換
+  function runGlossaryReplacement(glossaryList) {
+    const container = document.querySelector('.markdown-body');
+    if (!container) return;
+
+    const pathParts = window.location.pathname.split('/');
+    const currentSlug = decodeURIComponent(pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2] || '');
+
+    let html = container.innerHTML;
+
+    // A3: 將可能殘留的 broken-link 標籤直接還原為純文字
+    html = html.replace(/<span class="broken-link"[^>]*>(.*?)<\/span>/g, '$1');
+
+    const glossaryApplied = new Set(); // 紀錄此篇文章已匹配過的主條目 slug
+
+    // 建立扁平化的關鍵字清單（包含主稱與別名）
+    const matchItems = [];
+
+    for (const item of glossaryList) {
+      if (item.slug === currentSlug) continue; // 排除自身
+
+      // 主名稱
+      matchItems.push({
+        text: item.name,
+        slug: item.slug,
+        type: item.type
+      });
+
+      // 別名
+      for (const alias of item.aliases) {
+        if (!alias) continue;
+        matchItems.push({
+          text: alias,
+          slug: item.slug,
+          type: item.type
+        });
+      }
+    }
+
+    // 按關鍵字長度排序，確保長詞優先匹配
+    matchItems.sort((a, b) => b.text.length - a.text.length);
+
+    // HTML 標籤保護拆分法：以 HTML 標籤做正則切分
+    const parts = html.split(/(<\/?[^>]+>)/g);
+    let insideLink = false;
+
+    const newParts = parts.map(part => {
+      // 若為 HTML 標籤，判定是否為 <a>，且直接回傳不處理
+      if (part.startsWith('<')) {
+        const lower = part.toLowerCase();
+        if (lower.startsWith('<a ') || lower === '<a>') {
+          insideLink = true;
+        }
+        if (lower === '</a>') {
+          insideLink = false;
+        }
+        return part;
+      }
+
+      // 若處於超連結 <a> 標籤內部，直接跳過比對，避免 nested links
+      if (insideLink) return part;
+
+      const tokens = [];
+      let text = part;
+
+      // 比對所有的關鍵字，採用 Token 佔位符防護法避免二次匹配 HTML 屬性與標籤
+      for (const match of matchItems) {
+        if (glossaryApplied.has(match.slug)) continue; // A2: 此主條目（主稱或別名）只要已標記過，就跳過
+
+        if (text.includes(match.text)) {
+          const index = text.indexOf(match.text);
+          if (index !== -1) {
+            const left = text.substring(0, index);
+            const right = text.substring(index + match.text.length);
+
+            // 產生唯一佔位符與包裹 span（按需載入，不含 data-desc 節省體積）
+            const tokenPlaceholder = `___GLOSSARY_TOKEN_${tokens.length}___`;
+            const spanHtml = `<span class="glossary-term" data-type="${match.type}" data-slug="${match.slug}">${match.text}</span>`;
+            tokens.push(spanHtml);
+
+            text = left + tokenPlaceholder + right;
+            glossaryApplied.add(match.slug); // 標記為已套用
+          }
+        }
+      }
+
+      // 將該文本區塊內的佔位符還原為實體 HTML
+      for (let i = 0; i < tokens.length; i++) {
+        text = text.replace(`___GLOSSARY_TOKEN_${i}___`, tokens[i]);
+      }
+
+      return text;
+    });
+
+    container.innerHTML = newParts.join('');
+  }
+
+  // 前端互動控制
+  async function initGlossaryPopover() {
+    const popover = document.getElementById('glossary-popover');
+    const overlay = document.getElementById('glossary-bottom-overlay');
+    const sheet = document.getElementById('glossary-bottom-sheet');
+    if (!popover || !overlay || !sheet) return;
+
+    // 按需 Fetch 載入百科字典檔
+    let glossaryList = window.glossaryDataCache;
+    if (!glossaryList) {
+      try {
+        const jsonUrl = `${baseUrl}shanzhuang/glossary.json`.replace(/\/+/g, '/');
+        const res = await fetch(jsonUrl);
+        if (res.ok) {
+          glossaryList = await res.json();
+          window.glossaryDataCache = glossaryList;
+        }
+      } catch (err) {
+        console.error('Failed to fetch glossary data:', err);
+      }
+    }
+
+    if (!glossaryList) return;
+
+    // 建立快速查詢對照表 Map
+    const glossaryMap = {};
+    for (const item of glossaryList) {
+      glossaryMap[item.slug] = item;
+    }
+
+    // 1. 執行 HTML 百科詞條自動替換
+    try {
+      runGlossaryReplacement(glossaryList);
+    } catch (err) {
+      console.error('Glossary replacement error:', err);
+    }
+
+    const popoverTitle = popover.querySelector('.popover-title');
+    const popoverBadge = popover.querySelector('.popover-badge');
+    const popoverDesc = popover.querySelector('.popover-desc');
+    const popoverLink = popover.querySelector('.popover-link');
+
+    const sheetTitle = sheet.querySelector('.sheet-title');
+    const sheetBadge = sheet.querySelector('.sheet-badge');
+    const sheetDesc = sheet.querySelector('.sheet-desc');
+    const sheetLink = sheet.querySelector('.sheet-link');
+
+    const closeBtn = sheet.querySelector('.sheet-close-btn');
+
+    let hoverTimeout = null;
+    let leaveTimeout = null;
+
+    const typeMap = {
+      characters: '人物誌',
+      worldview: '設定集',
+      factions: '群雄會'
+    };
+
+    // 關閉行動端抽屜
+    function closeBottomSheet() {
+      sheet.classList.remove('active');
+      overlay.classList.remove('active');
+      setTimeout(() => {
+        sheet.classList.add('hidden');
+        overlay.classList.add('hidden');
+      }, 300);
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeBottomSheet);
+    overlay.addEventListener('click', closeBottomSheet);
+
+    // 偵測是否為觸控裝置
+    const isTouchDevice = () => {
+      return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    };
+
+    // 事件委派：監聽全網頁的 .glossary-term
+    document.addEventListener('mouseover', (e) => {
+      if (isTouchDevice()) return; // 觸控裝置走 click
+      const term = e.target.closest('.glossary-term');
+      if (!term) return;
+
+      if (leaveTimeout) {
+        clearTimeout(leaveTimeout);
+        leaveTimeout = null;
+      }
+
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+
+      hoverTimeout = window.setTimeout(() => {
+        const type = term.dataset.type || '';
+        const slug = term.dataset.slug || '';
+        const name = term.innerText;
+        
+        // 從快取 Map 中動態加載摘要 (A3 選項)
+        const glossaryItem = glossaryMap[slug] || {};
+        const desc = glossaryItem.desc || '暫無設定描述。';
+
+        // 填充資料
+        if (popoverTitle) popoverTitle.innerHTML = name;
+        if (popoverBadge) popoverBadge.innerHTML = typeMap[type] || '設定';
+        if (popoverDesc) popoverDesc.innerHTML = desc;
+        if (popoverLink) popoverLink.href = `${baseUrl}shanzhuang/${type}/${slug}`.replace(/\/+/g, '/');
+
+        // 顯示 popover
+        popover.classList.remove('hidden');
+        
+        // 定位計算
+        const termRect = term.getBoundingClientRect();
+        const popoverWidth = popover.offsetWidth;
+        const popoverHeight = popover.offsetHeight;
+
+        // 將 popover 置於單字上方，並水平置中
+        let left = termRect.left + (termRect.width / 2) - (popoverWidth / 2) + window.scrollX;
+        let top = termRect.top - popoverHeight - 8 + window.scrollY;
+
+        // 邊界防禦：避免超出左側或右側螢幕
+        const arrow = popover.querySelector('.popover-arrow');
+        let arrowOffset = popoverWidth / 2;
+
+        if (left < 10) {
+          arrowOffset += (left - 10);
+          left = 10;
+        } else if (left + popoverWidth > window.innerWidth - 10) {
+          const delta = (left + popoverWidth) - (window.innerWidth - 10);
+          arrowOffset += delta;
+          left = window.innerWidth - popoverWidth - 10;
+        }
+
+        if (arrow) {
+          arrow.style.left = `${Math.max(10, Math.min(popoverWidth - 18, arrowOffset - 4))}px`;
+        }
+
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+        popover.classList.add('active');
+      }, 200); // 200ms 防抖
+    });
+
+    document.addEventListener('mouseout', (e) => {
+      if (isTouchDevice()) return;
+      const term = e.target.closest('.glossary-term');
+      const toEl = e.relatedTarget;
+      
+      // 如果滑鼠移入的是 popover 本身，不關閉
+      if (toEl && (toEl.closest('#glossary-popover') || toEl.closest('.glossary-term'))) {
+        return;
+      }
+
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = null;
+      }
+
+      if (popover.classList.contains('active')) {
+        if (leaveTimeout) clearTimeout(leaveTimeout);
+        leaveTimeout = window.setTimeout(() => {
+          popover.classList.remove('active');
+          setTimeout(() => {
+            if (!popover.classList.contains('active')) {
+              popover.classList.add('hidden');
+            }
+          }, 200);
+        }, 150);
+      }
+    });
+
+    // popover 內部的滑鼠離開事件
+    popover.addEventListener('mouseleave', (e) => {
+      const toEl = e.relatedTarget;
+      if (toEl && toEl.closest('.glossary-term')) return;
+
+      popover.classList.remove('active');
+      setTimeout(() => {
+        if (!popover.classList.contains('active')) {
+          popover.classList.add('hidden');
+        }
+      }, 200);
+    });
+
+    // 點擊事件：用於行動端彈出 Bottom Sheet
+    document.addEventListener('click', (e) => {
+      const term = e.target.closest('.glossary-term');
+      if (!term) return;
+
+      // 阻止默認行為
+      e.preventDefault();
+
+      const type = term.dataset.type || '';
+      const slug = term.dataset.slug || '';
+      const name = term.innerText;
+
+      // 從快取 Map 中動態加載摘要 (A3 選項)
+      const glossaryItem = glossaryMap[slug] || {};
+      const desc = glossaryItem.desc || '暫無設定描述。';
+
+      if (isTouchDevice()) {
+        // 行動端彈出 Bottom Sheet
+        if (sheetTitle) sheetTitle.innerHTML = name;
+        if (sheetBadge) sheetBadge.innerHTML = typeMap[type] || '設定';
+        if (sheetDesc) sheetDesc.innerHTML = desc;
+        if (sheetLink) sheetLink.href = `${baseUrl}shanzhuang/${type}/${slug}`.replace(/\/+/g, '/');
+
+        overlay.classList.remove('hidden');
+        sheet.classList.remove('hidden');
+
+        // 強制 reflow 觸發 CSS 動畫
+        sheet.offsetHeight;
+
+        overlay.classList.add('active');
+        sheet.classList.add('active');
+      } else {
+        // 電腦端點擊直接跳轉
+        window.location.href = `${baseUrl}shanzhuang/${type}/${slug}`.replace(/\/+/g, '/');
+      }
+    });
+  }
+
+  // 配合 Astro ViewTransitions，在每次頁面加載後初始化
+  document.addEventListener('astro:page-load', initGlossaryPopover);
+</script>

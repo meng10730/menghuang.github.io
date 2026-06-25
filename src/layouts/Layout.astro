@@ -3,6 +3,7 @@ import { ViewTransitions } from "astro:transitions";
 import "../styles/global.css";
 import InkCanvas from "../components/InkCanvas.astro";
 import AudioPlayer from "../components/AudioPlayer.astro";
+import GlossaryPopover from "../components/GlossaryPopover.astro";
 
 interface Props {
   title?: string;
@@ -188,9 +189,97 @@ const {
           }
         }
 
+        function initScrollTracker() {
+          const path = window.location.pathname;
+          // 比對是否在詳情頁，如 /shanzhuang/novels/tianxia
+          const match = path.match(/\/shanzhuang\/(novels|characters|worldview|factions|guoxue)\/([^\/]+)\/?$/);
+          if (!match) return;
+
+          const type = match[1];
+          const slug = decodeURIComponent(match[2]);
+          
+          const titleEl = document.querySelector('h1');
+          const title = titleEl ? titleEl.innerText.trim() : document.title.split('|')[0].trim();
+
+          let scrollTimeout;
+          
+          function saveProgress() {
+            try {
+              const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+              if (docHeight <= 0) return;
+              
+              const percent = window.scrollY / docHeight;
+              
+              const record = {
+                title: title,
+                url: path,
+                percent: percent,
+                type: type,
+                slug: slug,
+                updatedAt: new Date().toISOString()
+              };
+              localStorage.setItem('shanzhuang_last_read', JSON.stringify(record));
+            } catch (e) {}
+          }
+
+          window.addEventListener('scroll', function() {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(saveProgress, 300);
+          });
+
+          window.addEventListener('beforeunload', saveProgress);
+          
+          // 滾動回上次閱讀位置 (防非同步圖片載入抖動與二次定位校準)
+          try {
+            const raw = localStorage.getItem('shanzhuang_last_read');
+            if (raw) {
+              const record = JSON.parse(raw);
+              if (record.url === path && record.percent > 0.02 && record.percent < 0.98) {
+                const performScroll = () => {
+                  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                  if (docHeight > 0) {
+                    window.scrollTo({
+                      top: docHeight * record.percent,
+                      behavior: 'smooth'
+                    });
+                    
+                    // 定位後加載微幅校準：在滾動動畫大致完成後（800ms）再次微調，防止滾動期間排版微幅改變
+                    setTimeout(() => {
+                      const currentDocHeight = document.documentElement.scrollHeight - window.innerHeight;
+                      window.scrollTo({
+                        top: currentDocHeight * record.percent,
+                        behavior: 'auto'
+                      });
+                    }, 800);
+                  }
+                };
+
+                // 檢查是否所有圖片都已載入完成
+                const images = Array.from(document.images);
+                const promises = images.map(img => {
+                  if (img.complete) return Promise.resolve();
+                  return new Promise(resolve => {
+                    img.addEventListener('load', resolve);
+                    img.addEventListener('error', resolve); // 錯誤也當作載入完畢，避免卡死
+                  });
+                });
+
+                // 設定最長等待時間 800ms，避免圖片掛掉或載入過久導致卡死
+                const timeoutPromise = new Promise(resolve => setTimeout(resolve, 800));
+
+                Promise.race([Promise.all(promises), timeoutPromise]).then(() => {
+                  // 圖片載入完成（或超時）後再等 100ms 讓瀏覽器重新排版，隨即執行定位
+                  setTimeout(performScroll, 100);
+                });
+              }
+            }
+          } catch (e) {}
+        }
+
         function initAdminNav() {
           checkAdminStatus();
           setupLogout();
+          initScrollTracker();
         }
 
         document.addEventListener('astro:page-load', initAdminNav);
@@ -212,6 +301,9 @@ const {
 
     <!-- 古風背景音樂播放器 -->
     <AudioPlayer />
+
+    <!-- 全站百科懸浮氣泡 -->
+    <GlossaryPopover />
   </body>
 </html>
 

@@ -95,6 +95,7 @@ export default config({
       format: { contentField: 'content' },
       schema: {
         name: fields.slug({ name: { label: '人物名稱' } }),
+        description: fields.text({ label: '人物簡介 (用於前台懸浮氣泡，選填)', multiline: true }),
         alias: fields.array(fields.text({ label: '別名 / 江湖稱號' }), {
           label: '別名',
           itemLabel: props => props.value,
@@ -116,6 +117,7 @@ export default config({
       format: { contentField: 'content' },
       schema: {
         title: fields.slug({ name: { label: '設定標題' } }),
+        description: fields.text({ label: '設定簡介 (用於前台懸浮氣泡，選填)', multiline: true }),
         category: fields.text({ label: '分類 (例：機制、地理、神明體系)' }),
         pubDate: fields.date({ label: '建立日期' }),
         content: fields.mdx({ label: '詳細設定內文', extension: 'md' }),
@@ -128,6 +130,7 @@ export default config({
       format: { contentField: 'content' },
       schema: {
         title: fields.slug({ name: { label: '勢力名稱' } }),
+        description: fields.text({ label: '勢力簡介 (用於前台懸浮氣泡，選填)', multiline: true }),
         category: fields.text({ label: '分類 (例：正派、地下、世俗、中立)' }),
         pubDate: fields.date({ label: '建立日期' }),
         content: fields.mdx({ label: '詳細勢力內文', extension: 'md' }),

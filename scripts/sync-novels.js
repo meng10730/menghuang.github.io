@@ -335,8 +335,8 @@ function runSync() {
           return `[${displayTitle}](${linkPath})`;
         } else {
           const fallbackText = cleanAlias || cleanBaseTerm;
-          console.warn(`⚠️  [警告] 檔案 "${file}" 中的連結 "${match}" 無法在對照表中解析，已降級為失效標籤 "${fallbackText}"。`);
-          return `<span class="broken-link" title="此條目暫無詳細設定">${fallbackText}</span>`;
+          console.warn(`⚠️  [警告] 檔案 "${file}" 中的連結 "${match}" 無法在對照表中解析，已降級為純文字 "${fallbackText}"。`);
+          return fallbackText;
         }
       });
 

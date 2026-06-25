@@ -68,6 +68,18 @@ const categories = [
     <p class="page-subtitle cursive-title">「一盞清茶論江湖，半壁江山寫墨意」</p>
     <div class="mountain-line"></div>
 
+    <!-- 一鍵續讀卡片 (預設隱藏，由 Client-side JS 讀取 localStorage 後動態顯現) -->
+    <div id="resume-read-card" class="resume-read-card hidden ink-fade-in">
+      <div class="resume-content">
+        <span class="resume-tag cursive-title">🔖 續讀</span>
+        <div class="resume-details">
+          <span class="resume-title"></span>
+          <span class="resume-progress"></span>
+        </div>
+      </div>
+      <a href="#" class="resume-btn font-semibold">繼續閱讀 ➔</a>
+    </div>
+
     <div class="scroll-wrapper">
       <div class="scroll-container" id="scroll-container">
         {categories.map(cat => (
@@ -93,29 +105,74 @@ const categories = [
 
 <script>
   // 垂直滾輪轉橫向滾動，防範觸控板衝突，並在邊界釋放垂直滾動
-  const container = document.getElementById('scroll-container');
-  if (container) {
-    container.addEventListener('wheel', (e) => {
-      // 觸控板左右滑動時 deltaX != 0，此時不接管以避免衝突
-      if (e.deltaX === 0) {
-        const delta = e.deltaY;
-        const scrollLeft = container.scrollLeft;
-        const maxScrollLeft = container.scrollWidth - container.clientWidth;
-        
-        // 判斷是否在最左端且繼續向上滾動，或在最右端且繼續向下滾動
-        const atLeft = scrollLeft <= 0;
-        const atRight = scrollLeft >= maxScrollLeft - 1; // 1px 容錯
-        
-        if ((delta < 0 && atLeft) || (delta > 0 && atRight)) {
-          // 到達邊界，釋放攔截，不呼叫 preventDefault()，讓瀏覽器垂直滾動
+  function initHorizontalScroll() {
+    const container = document.getElementById('scroll-container');
+    if (container) {
+      container.addEventListener('wheel', (e) => {
+        if (e.deltaX === 0) {
+          const delta = e.deltaY;
+          const scrollLeft = container.scrollLeft;
+          const maxScrollLeft = container.scrollWidth - container.clientWidth;
+          
+          const atLeft = scrollLeft <= 0;
+          const atRight = scrollLeft >= maxScrollLeft - 1;
+          
+          if ((delta < 0 && atLeft) || (delta > 0 && atRight)) {
+            return;
+          }
+          
+          e.preventDefault();
+          container.scrollLeft += delta * 1.2;
+        }
+      }, { passive: false });
+    }
+  }
+
+  // 讀取閱讀進度並顯示卡片
+  function checkResumeRead() {
+    const card = document.getElementById('resume-read-card');
+    if (!card) return;
+
+    try {
+      const raw = localStorage.getItem('shanzhuang_last_read');
+      if (raw) {
+        const record = JSON.parse(raw);
+        // 進度在 2% 到 95% 之間時，才顯示續讀橫幅（避免已看完的章節佔版面）
+        if (record && record.url && record.percent > 0.02 && record.percent < 0.95) {
+          const titleSpan = card.querySelector('.resume-title');
+          const progressSpan = card.querySelector('.resume-progress');
+          const btn = card.querySelector('.resume-btn');
+          
+          const typeMap = {
+            novels: '藏書閣 · 小說',
+            characters: '俠客譜 · 人物',
+            worldview: '風物誌 · 設定',
+            factions: '群雄會 · 組織',
+            guoxue: '研經室 · 國學'
+          };
+          
+          const typeText = typeMap[record.type] || '設定';
+          const percentText = Math.round(record.percent * 100);
+          
+          if (titleSpan) titleSpan.innerText = `《${record.title}》`;
+          if (progressSpan) progressSpan.innerText = `分類：${typeText} | 已讀進度：${percentText}% | 閱讀時間：${new Date(record.updatedAt).toLocaleDateString('zh-TW')} ${new Date(record.updatedAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+          if (btn) btn.href = record.url;
+          
+          card.classList.remove('hidden');
           return;
         }
-        
-        e.preventDefault();
-        container.scrollLeft += delta * 1.2;
       }
-    }, { passive: false });
+    } catch (e) {}
+    card.classList.add('hidden');
   }
+
+  function initShanzhuangHome() {
+    initHorizontalScroll();
+    checkResumeRead();
+  }
+
+  document.addEventListener('astro:page-load', initShanzhuangHome);
+  initShanzhuangHome();
 </script>
 
 <style>
@@ -286,8 +343,85 @@ const categories = [
     transform: translateX(6px);
   }
 
+  /* 一鍵續讀卡片水墨風樣式 */
+  .resume-read-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250, 248, 245, 0.95);
+    border: 1px solid #d9d2c9;
+    border-radius: 4px;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 12px rgba(44, 37, 32, 0.06);
+    border-left: 3px solid #a63f3f; /* 朱泥紅點綴 */
+    font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  .resume-read-card.hidden {
+    display: none !important;
+  }
+  
+  .resume-content {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+  }
+  
+  .resume-tag {
+    font-size: 0.95rem;
+    color: #a63f3f;
+    background: rgba(166, 63, 63, 0.05);
+    padding: 0.2rem 0.6rem;
+    border-radius: 3px;
+    border: 1px solid rgba(166, 63, 63, 0.15);
+    white-space: nowrap;
+  }
+  
+  .resume-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  
+  .resume-title {
+    font-size: 1.05rem;
+    font-weight: bold;
+    color: #1a1512;
+  }
+  
+  .resume-progress {
+    font-size: 0.8rem;
+    color: #8c7f73;
+  }
+  
+  .resume-btn {
+    font-size: 0.9rem;
+    color: #a63f3f;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+  }
+  
+  .resume-btn:hover {
+    color: var(--color-mountain-green);
+    transform: translateX(4px);
+  }
+
   /* 響應式佈局：當螢幕寬度較小時，允許垂直平鋪，但仍維持良好的美感 */
   @media (max-width: 768px) {
+    .resume-read-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .resume-btn {
+      align-self: flex-end;
+    }
+
     .scroll-wrapper::before,
     .scroll-wrapper::after {
       display: none; /* 行動端不需要漸層遮罩 */
