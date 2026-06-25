@@ -1,42 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>尋訪未果，歸隱山莊...</title>
-  <style>
-    body {
-      background-color: #fdfcf7;
-      color: #333333;
-      font-family: serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      text-align: center;
-      padding: 2rem;
-      border: 1px solid rgba(92, 92, 92, 0.15);
-      background: rgba(255, 255, 255, 0.5);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-      border-radius: 4px;
-    }
-    .loading-text {
-      font-size: 1.2rem;
-      letter-spacing: 0.1em;
-      margin-bottom: 1rem;
-    }
-    .sub-text {
-      font-size: 0.9rem;
-      color: #666666;
-    }
-  </style>
+  <script type="text/javascript">
+    window.addEventListener('error', function(e) {
+      try {
+        var logs = JSON.parse(localStorage.getItem('antigravity_error_logs') || '[]');
+        logs.push({ ts: new Date().toISOString(), msg: e.message, src: e.filename, line: e.lineno });
+        if (logs.length > 20) logs = logs.slice(-20);
+        localStorage.setItem('antigravity_error_logs', JSON.stringify(logs));
+      } catch(x) {}
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      try {
+        var logs = JSON.parse(localStorage.getItem('antigravity_error_logs') || '[]');
+        logs.push({ ts: new Date().toISOString(), msg: String(e.reason) });
+        if (logs.length > 20) logs = logs.slice(-20);
+        localStorage.setItem('antigravity_error_logs', JSON.stringify(logs));
+      } catch(x) {}
+    });
+  </script>
   <script type="text/javascript">
     (function() {
       var l = window.location;
-      // 判定是否為 keystatic 路由
+      // 判定是否為 keystatic 相關路由 (包含 oauth 回傳等)
       if (l.pathname.startsWith('/keystatic')) {
         // 重導向至 /keystatic/?redirect=...
         var destination = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/keystatic/?redirect=' + encodeURIComponent(l.pathname + l.search + l.hash);
@@ -46,12 +32,50 @@
         l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/');
       }
     })();
+    setTimeout(function() {
+      var c = document.querySelector('.container');
+      if (c) c.style.opacity = '1';
+    }, 250);
   </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>驗證身分中 | 唐門山莊</title>
+  <style>
+    body {
+      background-color: #fdfcf7;
+      color: #5c5c5c;
+      font-family: serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      padding: 2.5rem;
+      border: 1px solid rgba(92, 92, 92, 0.12);
+      background: rgba(255, 255, 255, 0.45);
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .loading-text {
+      font-size: 1.15rem;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.8rem;
+    }
+    .sub-text {
+      font-size: 0.85rem;
+      color: #8c8c8c;
+      letter-spacing: 0.05em;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <div class="loading-text">尋訪未果，歸隱山莊...</div>
-    <div class="sub-text">正在為您指引道路，請稍候。</div>
+    <div class="loading-text">莊主身分驗證中...</div>
+    <div class="sub-text">正在為您開啟山莊後台，請稍候。</div>
   </div>
 </body>
 </html>

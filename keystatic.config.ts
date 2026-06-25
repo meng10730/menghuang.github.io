@@ -1,10 +1,10 @@
 import { config, fields, collection } from '@keystatic/core';
 
 export default config({
-  storage: {
-    kind: 'github',
-    repo: 'meng10730/meng10730.github.io',
-  },
+  storage: import.meta.env.DEV
+    ? { kind: 'github' as const, repo: 'meng10730/meng10730.github.io' }
+    : { kind: 'cloud' as const },
+  cloud: { project: 'meng10730/meng10730.github.io' },
   collections: {
     blog: collection({
       label: '部落格文章',
