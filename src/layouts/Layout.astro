@@ -83,16 +83,14 @@ const {
                 href={`${import.meta.env.BASE_URL}keystatic`}
                 class="ink-link nav-item admin-login-btn"
                 id="admin-login-btn"
-                data-astro-reload
-                >莊主登入</a
+                data-astro-reload>莊主登入</a
               >
             </li>
             <li id="admin-logout-item" style="display: none;">
               <a
                 href="#"
                 class="ink-link nav-item admin-logout-btn"
-                id="admin-logout-btn"
-                >登出</a
+                id="admin-logout-btn">登出</a
               >
             </li>
           </ul>
@@ -101,20 +99,23 @@ const {
 
       <script is:inline>
         function checkAdminStatus() {
-          const btn = document.getElementById('admin-login-btn');
-          const logoutItem = document.getElementById('admin-logout-item');
+          const btn = document.getElementById("admin-login-btn");
+          const logoutItem = document.getElementById("admin-logout-item");
           if (btn) {
             try {
               // 1. 優先嘗試從 LocalStorage 讀取官方真正的 key: keystatic-cloud-access-token
-              let token = localStorage.getItem('keystatic-cloud-access-token');
+              let token = localStorage.getItem("keystatic-cloud-access-token");
 
               // 2. 備用：從 Cookie 讀取 keystatic-github-token 或是 keystatic-cloud-access-token
               if (!token) {
-                const cookies = document.cookie.split(';');
+                const cookies = document.cookie.split(";");
                 for (let i = 0; i < cookies.length; i++) {
-                  const pair = cookies[i].split('=');
+                  const pair = cookies[i].split("=");
                   const name = pair[0].trim();
-                  if (name === 'keystatic-github-token' || name === 'keystatic-cloud-access-token') {
+                  if (
+                    name === "keystatic-github-token" ||
+                    name === "keystatic-cloud-access-token"
+                  ) {
                     token = pair[1] ? pair[1].trim() : null;
                     break;
                   }
@@ -123,14 +124,17 @@ const {
 
               // 3. 備用：舊版的 keystatic-github-token
               if (!token) {
-                token = localStorage.getItem('keystatic-github-token');
+                token = localStorage.getItem("keystatic-github-token");
               }
 
               // 4. 備用啟發式搜尋 (尋找任何長度大於 10 且包含 keystatic 或 token 關鍵字的 localStorage 項)
               if (!token) {
                 for (let i = 0; i < localStorage.length; i++) {
                   const key = localStorage.key(i);
-                  if (key && (key.includes('keystatic') || key.includes('token'))) {
+                  if (
+                    key &&
+                    (key.includes("keystatic") || key.includes("token"))
+                  ) {
                     const val = localStorage.getItem(key);
                     if (val && val.length > 10) {
                       token = val;
@@ -141,13 +145,13 @@ const {
               }
 
               if (token) {
-                btn.textContent = '進入後台';
-                btn.title = '您已登入 GitHub 管理者帳號';
-                if (logoutItem) logoutItem.style.display = 'block';
+                btn.textContent = "進入後台";
+                btn.title = "您已登入 GitHub 管理者帳號";
+                if (logoutItem) logoutItem.style.display = "block";
               } else {
-                btn.textContent = '莊主登入';
-                btn.title = '登入 GitHub 進行文章編輯';
-                if (logoutItem) logoutItem.style.display = 'none';
+                btn.textContent = "莊主登入";
+                btn.title = "登入 GitHub 進行文章編輯";
+                if (logoutItem) logoutItem.style.display = "none";
               }
             } catch (e) {
               // 防禦沙箱環境限制
@@ -156,33 +160,40 @@ const {
         }
 
         function setupLogout() {
-          const logoutBtn = document.getElementById('admin-logout-btn');
+          const logoutBtn = document.getElementById("admin-logout-btn");
           if (logoutBtn) {
-            logoutBtn.addEventListener('click', function(e) {
+            logoutBtn.addEventListener("click", function (e) {
               e.preventDefault();
               try {
                 // 1. 清除 localStorage 特定 token 與 state keys
-                localStorage.removeItem('keystatic-cloud-access-token');
-                localStorage.removeItem('keystatic-cloud-state');
-                localStorage.removeItem('keystatic-github-token');
-                
+                localStorage.removeItem("keystatic-cloud-access-token");
+                localStorage.removeItem("keystatic-cloud-state");
+                localStorage.removeItem("keystatic-github-token");
+
                 // 2. 清除 Cookie 狀態 (涵蓋 Path=/ 與 Path=/keystatic)
-                document.cookie = 'keystatic-github-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-                document.cookie = 'keystatic-github-token=; Path=/keystatic; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-                document.cookie = 'keystatic-cloud-access-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-                document.cookie = 'keystatic-cloud-access-token=; Path=/keystatic; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-                
+                document.cookie =
+                  "keystatic-github-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                document.cookie =
+                  "keystatic-github-token=; Path=/keystatic; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                document.cookie =
+                  "keystatic-cloud-access-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                document.cookie =
+                  "keystatic-cloud-access-token=; Path=/keystatic; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+
                 // 3. 啟發式清理含有 keystatic 關鍵字之本地快取
                 for (let i = localStorage.length - 1; i >= 0; i--) {
                   const key = localStorage.key(i);
-                  if (key && (key.includes('keystatic') || key.includes('token'))) {
+                  if (
+                    key &&
+                    (key.includes("keystatic") || key.includes("token"))
+                  ) {
                     localStorage.removeItem(key);
                   }
                 }
 
                 checkAdminStatus();
-                if (window.location.pathname.startsWith('/keystatic')) {
-                  window.location.href = '/';
+                if (window.location.pathname.startsWith("/keystatic")) {
+                  window.location.href = "/";
                 }
               } catch (err) {}
             });
@@ -192,63 +203,78 @@ const {
         function initScrollTracker() {
           const path = window.location.pathname;
           // 比對是否在詳情頁，如 /shanzhuang/novels/tianxia
-          const match = path.match(/\/shanzhuang\/(novels|characters|worldview|factions|guoxue)\/([^\/]+)\/?$/);
+          const match = path.match(
+            /\/shanzhuang\/(novels|characters|worldview|factions|guoxue)\/([^\/]+)\/?$/,
+          );
           if (!match) return;
 
           const type = match[1];
           const slug = decodeURIComponent(match[2]);
-          
-          const titleEl = document.querySelector('h1');
-          const title = titleEl ? titleEl.innerText.trim() : document.title.split('|')[0].trim();
+
+          const titleEl = document.querySelector("h1");
+          const title = titleEl
+            ? titleEl.innerText.trim()
+            : document.title.split("|")[0].trim();
 
           let scrollTimeout;
-          
+
           function saveProgress() {
             try {
-              const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+              const docHeight =
+                document.documentElement.scrollHeight - window.innerHeight;
               if (docHeight <= 0) return;
-              
+
               const percent = window.scrollY / docHeight;
-              
+
               const record = {
                 title: title,
                 url: path,
                 percent: percent,
                 type: type,
                 slug: slug,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
               };
-              localStorage.setItem('shanzhuang_last_read', JSON.stringify(record));
+              localStorage.setItem(
+                "shanzhuang_last_read",
+                JSON.stringify(record),
+              );
             } catch (e) {}
           }
 
-          window.addEventListener('scroll', function() {
+          window.addEventListener("scroll", function () {
             if (scrollTimeout) clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(saveProgress, 300);
           });
 
-          window.addEventListener('beforeunload', saveProgress);
-          
+          window.addEventListener("beforeunload", saveProgress);
+
           // 滾動回上次閱讀位置 (防非同步圖片載入抖動與二次定位校準)
           try {
-            const raw = localStorage.getItem('shanzhuang_last_read');
+            const raw = localStorage.getItem("shanzhuang_last_read");
             if (raw) {
               const record = JSON.parse(raw);
-              if (record.url === path && record.percent > 0.02 && record.percent < 0.98) {
+              if (
+                record.url === path &&
+                record.percent > 0.02 &&
+                record.percent < 0.98
+              ) {
                 const performScroll = () => {
-                  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                  const docHeight =
+                    document.documentElement.scrollHeight - window.innerHeight;
                   if (docHeight > 0) {
                     window.scrollTo({
                       top: docHeight * record.percent,
-                      behavior: 'smooth'
+                      behavior: "smooth",
                     });
-                    
+
                     // 定位後加載微幅校準：在滾動動畫大致完成後（800ms）再次微調，防止滾動期間排版微幅改變
                     setTimeout(() => {
-                      const currentDocHeight = document.documentElement.scrollHeight - window.innerHeight;
+                      const currentDocHeight =
+                        document.documentElement.scrollHeight -
+                        window.innerHeight;
                       window.scrollTo({
                         top: currentDocHeight * record.percent,
-                        behavior: 'auto'
+                        behavior: "auto",
                       });
                     }, 800);
                   }
@@ -256,21 +282,25 @@ const {
 
                 // 檢查是否所有圖片都已載入完成
                 const images = Array.from(document.images);
-                const promises = images.map(img => {
+                const promises = images.map((img) => {
                   if (img.complete) return Promise.resolve();
-                  return new Promise(resolve => {
-                    img.addEventListener('load', resolve);
-                    img.addEventListener('error', resolve); // 錯誤也當作載入完畢，避免卡死
+                  return new Promise((resolve) => {
+                    img.addEventListener("load", resolve);
+                    img.addEventListener("error", resolve); // 錯誤也當作載入完畢，避免卡死
                   });
                 });
 
                 // 設定最長等待時間 800ms，避免圖片掛掉或載入過久導致卡死
-                const timeoutPromise = new Promise(resolve => setTimeout(resolve, 800));
+                const timeoutPromise = new Promise((resolve) =>
+                  setTimeout(resolve, 800),
+                );
 
-                Promise.race([Promise.all(promises), timeoutPromise]).then(() => {
-                  // 圖片載入完成（或超時）後再等 100ms 讓瀏覽器重新排版，隨即執行定位
-                  setTimeout(performScroll, 100);
-                });
+                Promise.race([Promise.all(promises), timeoutPromise]).then(
+                  () => {
+                    // 圖片載入完成（或超時）後再等 100ms 讓瀏覽器重新排版，隨即執行定位
+                    setTimeout(performScroll, 100);
+                  },
+                );
               }
             }
           } catch (e) {}
@@ -281,7 +311,7 @@ const {
         const sfxBuffers = {
           normal: null,
           high: null,
-          low: null
+          low: null,
         };
 
         async function loadSfx(name, url) {
@@ -298,27 +328,31 @@ const {
 
         async function initWebAudioSfx() {
           if (audioCtx) return;
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
           if (!AudioContextClass) return;
           audioCtx = new AudioContextClass();
-          
+
           await Promise.all([
-            loadSfx('normal', '/audio/click.wav'),
-            loadSfx('high', '/audio/click-high.wav'),
-            loadSfx('low', '/audio/click-low.wav')
+            loadSfx("normal", "/audio/click.wav"),
+            loadSfx("high", "/audio/click-high.wav"),
+            loadSfx("low", "/audio/click-low.wav"),
           ]);
         }
 
         function playClickSfx(type) {
           try {
             // 獨立讀取 LocalStorage 開關 (預設啟用)
-            if (localStorage.getItem('shanzhuang_sfx_click_enabled') === 'false') return;
+            if (
+              localStorage.getItem("shanzhuang_sfx_click_enabled") === "false"
+            )
+              return;
 
             if (!audioCtx) {
               initWebAudioSfx().then(() => triggerBufferPlay(type));
               return;
             }
-            if (audioCtx.state === 'suspended') {
+            if (audioCtx.state === "suspended") {
               audioCtx.resume();
             }
             triggerBufferPlay(type);
@@ -330,43 +364,55 @@ const {
           if (!buffer || !audioCtx) return;
           const source = audioCtx.createBufferSource();
           source.buffer = buffer;
-          source.connect(audioCtx.destination);
+
+          // 建立增益節點以將音效音量調大
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 4.0;
+
+          source.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
           source.start(0);
         }
 
         function setupGlobalClickSfx() {
           // 初始化音訊解碼 (配合瀏覽器安全策略限制，於首次點擊或交互時自動加載)
-          document.addEventListener('click', function initOnFirstClick() {
-            initWebAudioSfx();
-            document.removeEventListener('click', initOnFirstClick);
-          }, { once: true });
+          document.addEventListener(
+            "click",
+            function initOnFirstClick() {
+              initWebAudioSfx();
+              document.removeEventListener("click", initOnFirstClick);
+            },
+            { once: true },
+          );
 
           // 全域事件代理監聽
-          document.addEventListener('click', function(e) {
+          document.addEventListener("click", function (e) {
             const target = e.target;
             if (!target) return;
 
-            const clickable = target.closest('a, button, .scroll-card, .member-card, .ink-expand-btn');
+            const clickable = target.closest(
+              "a, button, .scroll-card, .member-card, .ink-expand-btn",
+            );
             if (!clickable) return;
 
             // 1. 壞連結 / 未登記設定 (LowVoice)
-            if (clickable.classList.contains('broken-link')) {
-              playClickSfx('low');
+            if (clickable.classList.contains("broken-link")) {
+              playClickSfx("low");
               return;
             }
 
             // 2. 展開 / 收合 / 特殊開關 (HighVoice)
             if (
-              clickable.id === 'toggle-members-btn' ||
-              clickable.id === 'music-toggle' ||
-              clickable.classList.contains('ink-expand-btn')
+              clickable.id === "toggle-members-btn" ||
+              clickable.id === "music-toggle" ||
+              clickable.classList.contains("ink-expand-btn")
             ) {
-              playClickSfx('high');
+              playClickSfx("high");
               return;
             }
 
             // 3. 一般點擊 (Click2)
-            playClickSfx('normal');
+            playClickSfx("normal");
           });
         }
 
@@ -377,7 +423,7 @@ const {
           setupGlobalClickSfx();
         }
 
-        document.addEventListener('astro:page-load', initAdminNav);
+        document.addEventListener("astro:page-load", initAdminNav);
         initAdminNav();
       </script>
 
@@ -470,7 +516,7 @@ const {
   }
 
   .admin-logout-btn {
-    border: 1px solid rgba(180, 50, 50, 0.20);
+    border: 1px solid rgba(180, 50, 50, 0.2);
     padding: 0.2rem 0.65rem;
     border-radius: 4px;
     font-size: 0.95rem !important;
