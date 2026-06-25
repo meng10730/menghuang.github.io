@@ -108,7 +108,6 @@
 
   /* 8 秒滾動完一輪，僅當確定需要滾動且 visible 時才啟用 */
   .music-marquee-container.visible.should-scroll .music-marquee-content {
-    padding-left: 100%;
     animation: marquee-scroll 8s linear infinite;
   }
 
@@ -132,7 +131,7 @@
       transform: translate3d(0, 0, 0);
     }
     100% {
-      transform: translate3d(-100%, 0, 0);
+      transform: translate3d(-50%, 0, 0); /* 雙生文字平移一半實現無縫循環 */
     }
   }
 
@@ -295,7 +294,12 @@
       }
     };
 
-    // 同步背景音樂按鈕的 UI 狀態與跑馬燈狀態
+    let isToggling = false;
+
+    // 同步背景音樂按鈕的 UI 狀態與跑馬燈狀態（僅由 play/pause 事件驅動）
+    let needScroll = false;
+
+    // 同步背景音樂按鈕的 UI 狀態與跑馬燈狀態（僅由 play/pause 事件驅動）
     const updateMusicUI = () => {
       if (audio.paused) {
         musicBtn.classList.remove('playing');
@@ -303,20 +307,31 @@
           marqueeContainer.classList.remove('visible');
           marqueeContainer.classList.remove('should-scroll');
         }
+        needScroll = false;
       } else {
         musicBtn.classList.add('playing');
         if (marqueeContainer && marqueeContent) {
           const title = getMusicTitle(audio.src);
+          // 先放置單份文字以測量實際寬度
           marqueeContent.textContent = title;
           marqueeContainer.classList.add('visible');
           
           // 重置滾動狀態
           marqueeContainer.classList.remove('should-scroll');
+          needScroll = false;
           
-          // 延遲測量以防 DOM 未完全展開，當歌名長度超出 130px 時啟用跑馬燈滾動
+          // 延遲測量以防 DOM 未完全展開，當歌名長度超出 130px 時啟用雙生無縫跑馬燈滾動
           setTimeout(() => {
-            if (marqueeContent.scrollWidth > 130) {
-              marqueeContainer.classList.add('should-scroll');
+            if (!audio.paused) {
+              const singleWidth = marqueeContent.scrollWidth;
+              if (singleWidth > 130) {
+                needScroll = true;
+                marqueeContent.innerHTML = `<span>${title}</span><span style="display:inline-block; width: 3.5rem;"></span><span>${title}</span>`;
+                marqueeContainer.classList.add('should-scroll');
+              } else {
+                needScroll = false;
+                marqueeContent.textContent = title;
+              }
             }
           }, 80);
         }
@@ -328,19 +343,26 @@
       if (!marqueeContainer || !marqueeContent) return;
       if (document.hidden) {
         marqueeContainer.classList.remove('should-scroll');
-      } else if (!audio.paused && marqueeContent.scrollWidth > 130) {
+      } else if (!audio.paused && needScroll) {
         marqueeContainer.classList.add('should-scroll');
       }
     };
-
+    // 引入 Busy Lock 避免快速點擊產生的狀態衝突
     const toggleMusic = () => {
+      if (isToggling) return;
+      isToggling = true;
+
       if (audio.paused) {
-        audio.play().then(updateMusicUI).catch((err) => {
-          console.log('音樂播放失敗，可能需要更多使用者互動：', err);
-        });
+        audio.play()
+          .catch((err) => {
+            console.log('音樂播放失敗，可能需要更多使用者互動：', err);
+          })
+          .finally(() => {
+            setTimeout(() => { isToggling = false; }, 200);
+          });
       } else {
         audio.pause();
-        updateMusicUI();
+        setTimeout(() => { isToggling = false; }, 200);
       }
     };
 
@@ -348,6 +370,7 @@
     audio.addEventListener('play', updateMusicUI);
     audio.addEventListener('pause', updateMusicUI);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
 
     // 2. 同步全域按鍵音效的 UI 狀態
     const updateSfxUI = () => {

@@ -1,15 +1,30 @@
 ---
 import { KeystaticApp } from '../../components/KeystaticApp.tsx';
 
-export const prerender = false;
+export const prerender = true;
+
+export function getStaticPaths() {
+  return [
+    { params: { params: undefined } },
+  ];
+}
 ---
-<script is:inline>
-  (function() {
-    var params = new URLSearchParams(window.location.search);
-    var redirectUrl = params.get('redirect');
-    if (redirectUrl) {
-      window.history.replaceState(null, '', redirectUrl);
-    }
-  })();
-</script>
-<KeystaticApp client:only="react" />
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>莊主後台 | 唐門山莊</title>
+  <script is:inline>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var redirectUrl = params.get('redirect');
+      if (redirectUrl) {
+        window.history.replaceState(null, '', redirectUrl);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <KeystaticApp client:only="react" />
+</body>
+</html>
