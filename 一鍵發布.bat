@@ -117,11 +117,12 @@ git push
 if %errorlevel% neq 0 goto PUSH_FAILED
 
 echo.
-echo =========================================
-echo  Publish successful! Code pushed to GitHub.
-echo  GitHub Actions will update your site automatically.
-echo  Please wait 1-2 minutes and refresh your webpage.
-echo =========================================
+echo ====================================================
+echo  上傳成功！已順利推送至 GitHub 遠端倉庫。
+echo  正在為您追蹤 GitHub Actions 線上自動部署狀態...
+echo ====================================================
+echo.
+node scripts/check-action-status.js
 goto PUSH_DONE
 
 :OFFLINE_MODE
